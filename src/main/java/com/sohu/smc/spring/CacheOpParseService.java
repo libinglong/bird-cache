@@ -1,9 +1,10 @@
-package com.sohu.smc.core;
+package com.sohu.smc.spring;
 
 import com.sohu.smc.anno.MdBatchCache;
 import com.sohu.smc.anno.MdCacheEvict;
 import com.sohu.smc.anno.MdCachePut;
 import com.sohu.smc.anno.MdCacheable;
+import com.sohu.smc.core.*;
 import lombok.Data;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;

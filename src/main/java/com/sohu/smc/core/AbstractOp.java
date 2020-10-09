@@ -1,6 +1,7 @@
 package com.sohu.smc.core;
 
 import com.sohu.smc.serializer.Serializer;
+import com.sohu.smc.spring.SpelParseService;
 import com.sohu.smc.util.PrefixedKeyUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,4 +1,4 @@
-package com.sohu.smc.core;
+package com.sohu.smc.spring;
 
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
