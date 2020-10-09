@@ -11,13 +11,17 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@Repeatable(MdBatchCaches.class)
 public @interface MdBatchCache {
 
     /**
-     * 批量查询,如果缓存miss,需要指定使用哪个方法加载数据.
-     * @return 方法名称
+     * 批量查询主参数在参数列表中的index
+     * @return
      */
-    String valueLoaderMethod() default "";
+    int index() default 0;
 
+    /**
+     * 用于生产cache key的spel表达式
+     * @return
+     */
+    String key();
 }

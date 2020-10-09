@@ -3,6 +3,7 @@ package com.sohu.smc.anno;
 import java.lang.annotation.*;
 
 /**
+ * 一个方法只允许有一个MdCacheable
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/7
@@ -11,14 +12,12 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@Repeatable(MdCacheables.class)
 public @interface MdCacheable {
 
     /**
-     * 批量查询,如果缓存miss,需要指定使用哪个方法加载数据.
-     * 方法的签名必须是
-     * @return 方法名称
+     * 用于生产cache key的spel表达式
+     * @return
      */
-    String valueLoadMethod() default "";
+    String key();
 
 }

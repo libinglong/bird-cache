@@ -14,4 +14,10 @@ import java.lang.annotation.*;
 @Repeatable(MdCacheEvicts.class)
 public @interface MdCacheEvict {
 
+    /**
+     * 用于生产cache key的spel表达式
+     * @return
+     */
+    String key();
+
 }

@@ -14,10 +14,9 @@ import java.lang.annotation.*;
 @Repeatable(MdCachePuts.class)
 public @interface MdCachePut {
 
-
     /**
-     * 表示只是更新缓存,不涉及到数据库之类持久化的操作.此场景下,只需要保证双机房数据一致性即可.
+     * 用于生产cache key的spel表达式
      * @return
      */
-    boolean cacheOnly() default false;
+    String key();
 }
