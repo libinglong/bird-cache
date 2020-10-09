@@ -1,0 +1,113 @@
+package com.sohu.smc.md.cache.core;
+
+import com.sohu.smc.md.cache.util.PrefixedKeyUtils;
+import com.sohu.smc.md.cache.anno.MdBatchCache;
+import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.Expression;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * @author binglongli217932
+ * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
+ * @since 2020/9/29
+ */
+@Component
+public class MdBatchCacheOp extends AbstractOp<MdBatchCache> {
+
+    public MdBatchCacheOp(MetaData<MdBatchCache> metaData) {
+        super(metaData);
+    }
+
+    private Expression listExpr;
+
+    public List<BatchEntry> getBatchEntries(MethodInvocation methodInvocation){
+        EvaluationContext context = new ParamEvaluationContext(methodInvocation.getArguments());
+        List<?> list = listExpr.getValue(context, List.class);
+        List<BatchEntry> batchEntries = new ArrayList<>();
+        for (Object o : list){
+            StandardEvaluationContext ctx = new ParamEvaluationContext(methodInvocation.getArguments());
+            ctx.setVariable("obj", o);
+            byte[] rawKey = serializer.serialize(keyExpression.getValue(ctx));
+            byte[] prefixedKey = PrefixedKeyUtils.getPrefixedKey(prefix, rawKey);
+            BatchEntry batchEntry = new BatchEntry();
+            batchEntry.setKeyObj(o);
+            batchEntry.setPrefixedKey(prefixedKey);
+            batchEntries.add(batchEntry);
+        }
+        return batchEntries;
+    }
+
+    @Override
+    protected String getKeyExpr() {
+        return metaData.getAnno()
+                .key();
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        super.afterPropertiesSet();
+        this.listExpr = spelParseService.getExpression("#p" + metaData.getAnno().index());
+    }
+
+    public List<ValueWrapper> getBatchCache(List<byte[]> keys) {
+        return cache.get(keys)
+                .stream()
+                .map(this::byte2ValueWrapper)
+                .collect(Collectors.toList());
+    }
+
+    public int getListIndex() {
+        return metaData.getAnno().index();
+    }
+
+
+    public List<?> processBatchCacheOp(InvocationContext invocationContext) throws Throwable {
+        MethodInvocation methodInvocation = invocationContext.getMethodInvocation();
+        if (!List.class.isAssignableFrom(methodInvocation.getMethod().getReturnType())){
+            throw new UnsupportedOperationException("the method returnType must be List");
+        }
+        List<BatchEntry> batchEntries = getBatchEntries(methodInvocation);
+        List<byte[]> byteKeyList = batchEntries.stream()
+                .map(BatchEntry::getPrefixedKey)
+                .collect(Collectors.toList());
+        List<ValueWrapper> cacheList = getBatchCache(byteKeyList);
+        for (int i = 0; i < batchEntries.size(); i++) {
+            batchEntries.get(i)
+                    .setValueWrapper(cacheList.get(i));
+        }
+        List<BatchEntry> missingBatchEntries = batchEntries.stream()
+                .filter(batchEntry -> batchEntry.getValueWrapper() == null)
+                .collect(Collectors.toList());
+        List<Object> missingList = missingBatchEntries.stream()
+                .map(BatchEntry::getKeyObj)
+                .collect(Collectors.toList());
+        methodInvocation.getArguments()[getListIndex()] = missingList;
+        Object result = methodInvocation.proceed();
+        List<?> missingValueList = (List<?>) result;
+        for (int i = 0; i < missingBatchEntries.size(); i++) {
+            missingBatchEntries.get(i)
+                    .setValueWrapper(new ValueWrapper(missingValueList.get(i)));
+        }
+        Map<byte[], byte[]> kvs = missingBatchEntries.stream()
+                .collect(Collectors.toMap(BatchEntry::getPrefixedKey, this::serialize));
+        cache.put(kvs);
+        return batchEntries.stream()
+                .map(batchEntry -> batchEntry.getValueWrapper().get())
+                .collect(Collectors.toList());
+    }
+
+    private byte[] serialize(BatchEntry batchEntry){
+        Object o = batchEntry.getValueWrapper()
+                .get();
+        return serializer.serialize(o);
+    }
+
+}

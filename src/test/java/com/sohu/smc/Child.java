@@ -1,6 +1,6 @@
 package com.sohu.smc;
 
-import com.sohu.smc.anno.MdCacheable;
+import com.sohu.smc.md.cache.anno.MdCacheable;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
