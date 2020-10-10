@@ -36,6 +36,7 @@ public class MdCachePutOp extends AbstractOp<MdCachePut> {
 
     @Override
     protected String getKeyExpr() {
-        return null;
+        return metaData.getAnno()
+                .key();
     }
 }

@@ -6,7 +6,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 用于缓存一次调用中的临时变量
+ * 此类用于缓存一些中间变量
+ * 每个方法对应一个InvocationContext,多个AbstractOp
+ * 因此一个InvocationContext对应多个AbstractOp
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/9

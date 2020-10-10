@@ -9,7 +9,6 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import java.lang.annotation.Annotation;
 import java.nio.charset.StandardCharsets;
@@ -63,8 +62,9 @@ public abstract class AbstractOp<A extends Annotation> implements InitializingBe
 
     public byte[] getPrefixedKey(InvocationContext invocationContext){
         OpContext opContext = invocationContext.getOpContext(this);
-        if (opContext.getPrefixedKey() != null){
-            return opContext.getPrefixedKey();
+        byte[] result = opContext.getPrefixedKey();
+        if (result != null){
+            return result;
         }
         EvaluationContext context = new ParamEvaluationContext(invocationContext.getMethodInvocation().getArguments());
         byte[] rawKey = serializer.serialize(keyExpression.getValue(context));
