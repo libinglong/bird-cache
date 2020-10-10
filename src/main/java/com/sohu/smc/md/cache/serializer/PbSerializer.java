@@ -4,7 +4,7 @@ import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
 import io.protostuff.Schema;
 import io.protostuff.runtime.RuntimeSchema;
-
+import org.springframework.stereotype.Component;
 
 
 /**
@@ -12,6 +12,7 @@ import io.protostuff.runtime.RuntimeSchema;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/4/13
  */
+@Component
 public class PbSerializer implements Serializer {
 
     @Override

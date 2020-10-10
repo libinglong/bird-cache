@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 /**
@@ -60,7 +61,7 @@ public class MdBatchCacheOp extends AbstractOp<MdBatchCache> {
         this.listExpr = spelParseService.getExpression("#p" + metaData.getAnno().index());
     }
 
-    public List<ValueWrapper> getBatchCache(List<byte[]> keys) {
+    public List<ValueWrapper> getBatchCache(List<byte[]> keys) throws ExecutionException, InterruptedException {
         return cache.get(keys)
                 .stream()
                 .map(this::byte2ValueWrapper)

@@ -1,5 +1,6 @@
 package com.sohu.smc.md.cache.spring;
 
+import lombok.Builder;
 import lombok.Data;
 
 /**
@@ -8,6 +9,7 @@ import lombok.Data;
  * @since 2020/9/29
  */
 @Data
+@Builder
 public class CacheProperties {
 
     private Long expireTime;

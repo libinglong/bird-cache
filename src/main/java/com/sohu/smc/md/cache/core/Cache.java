@@ -2,6 +2,7 @@ package com.sohu.smc.md.cache.core;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @author binglongli217932
@@ -38,7 +39,7 @@ public interface Cache {
      * @param time time time to expire in ms
      * @throws Exception e
      */
-    void set(Map<byte[],byte[]> kvs, long time) throws Exception;
+    void set(Map<byte[],byte[]> kvs, long time) throws ExecutionException, InterruptedException;
 
     /**
      * 缓存查询
@@ -53,6 +54,6 @@ public interface Cache {
      * @param keys the keys of this cache
      * @return the list mapping to keys in order
      */
-    List<byte[]> get(List<byte[]> keys);
+    List<byte[]> get(List<byte[]> keys) throws ExecutionException, InterruptedException;
 
 }

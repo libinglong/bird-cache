@@ -51,23 +51,27 @@ public class SimpleRedisCache implements Cache {
 
     @Override
     public void set(Map<byte[], byte[]> kvs, long time) throws ExecutionException, InterruptedException {
-        List<RedisFuture<String>> list = new ArrayList<>();
-        kvs.forEach((bytes, bytes2) -> {
-            list.add(asyncCommands.psetex(bytes, time, bytes2));
-        });
-        for (RedisFuture<String> stringRedisFuture : list) {
+        List<RedisFuture<String>> futures = new ArrayList<>();
+        kvs.forEach((bytes, bytes2) -> futures.add(asyncCommands.psetex(bytes, time, bytes2)));
+        for (RedisFuture<String> stringRedisFuture : futures) {
             stringRedisFuture.get();
         }
     }
 
     @Override
     public byte[] get(byte[] key) {
-        return new byte[0];
+        return syncCommand.get(key);
     }
 
     @Override
-    public List<byte[]> get(List<byte[]> keys) {
-        return null;
+    public List<byte[]> get(List<byte[]> keys) throws ExecutionException, InterruptedException {
+        List<RedisFuture<byte[]>> futures = new ArrayList<>();
+        keys.forEach(bytes -> futures.add(asyncCommands.get(bytes)));
+        List<byte[]> result = new ArrayList<>();
+        for (RedisFuture<byte[]> future : futures) {
+            result.add(future.get());
+        }
+        return result;
     }
 
 }
