@@ -1,14 +1,13 @@
 package com.sohu.smc.md.cache.core;
 
-import com.sohu.smc.md.cache.util.PrefixedKeyUtils;
 import com.sohu.smc.md.cache.anno.MdBatchCache;
 import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
+import com.sohu.smc.md.cache.util.PrefixedKeyUtils;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -37,7 +36,7 @@ public class MdBatchCacheOp extends AbstractOp<MdBatchCache> {
         List<?> list = listExpr.getValue(context, List.class);
         List<BatchEntry> batchEntries = new ArrayList<>();
         for (Object o : list){
-            StandardEvaluationContext ctx = new ParamEvaluationContext(methodInvocation.getArguments());
+            EvaluationContext ctx = new ParamEvaluationContext(methodInvocation.getArguments());
             ctx.setVariable("obj", o);
             byte[] rawKey = serializer.serialize(keyExpression.getValue(ctx));
             byte[] prefixedKey = PrefixedKeyUtils.getPrefixedKey(prefix, rawKey);
@@ -87,9 +86,20 @@ public class MdBatchCacheOp extends AbstractOp<MdBatchCache> {
             batchEntries.get(i)
                     .setValueWrapper(cacheList.get(i));
         }
+        fetchIfMissing(batchEntries, methodInvocation);
+        return batchEntries.stream()
+                .map(batchEntry -> batchEntry.getValueWrapper().get())
+                .collect(Collectors.toList());
+    }
+
+    private void fetchIfMissing(List<BatchEntry> batchEntries,MethodInvocation methodInvocation)
+            throws Throwable {
         List<BatchEntry> missingBatchEntries = batchEntries.stream()
                 .filter(batchEntry -> batchEntry.getValueWrapper() == null)
                 .collect(Collectors.toList());
+        if (missingBatchEntries.size() == 0){
+            return;
+        }
         List<Object> missingList = missingBatchEntries.stream()
                 .map(BatchEntry::getKeyObj)
                 .collect(Collectors.toList());
@@ -103,9 +113,6 @@ public class MdBatchCacheOp extends AbstractOp<MdBatchCache> {
         Map<byte[], byte[]> kvs = missingBatchEntries.stream()
                 .collect(Collectors.toMap(BatchEntry::getPrefixedKey, this::serialize));
         cache.set(kvs, cacheProperties.getExpireTime());
-        return batchEntries.stream()
-                .map(batchEntry -> batchEntry.getValueWrapper().get())
-                .collect(Collectors.toList());
     }
 
     private byte[] serialize(BatchEntry batchEntry){

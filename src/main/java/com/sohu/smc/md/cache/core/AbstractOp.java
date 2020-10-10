@@ -1,6 +1,7 @@
 package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.serializer.Serializer;
+import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
 import com.sohu.smc.md.cache.spring.CacheProperties;
 import com.sohu.smc.md.cache.spring.SpelParseService;
 import com.sohu.smc.md.cache.util.PrefixedKeyUtils;
@@ -65,7 +66,7 @@ public abstract class AbstractOp<A extends Annotation> implements InitializingBe
         if (opContext.getPrefixedKey() != null){
             return opContext.getPrefixedKey();
         }
-        EvaluationContext context = new StandardEvaluationContext(invocationContext.getMethodInvocation().getArguments());
+        EvaluationContext context = new ParamEvaluationContext(invocationContext.getMethodInvocation().getArguments());
         byte[] rawKey = serializer.serialize(keyExpression.getValue(context));
         byte[] prefixedKey = PrefixedKeyUtils.getPrefixedKey(prefix, rawKey);
         opContext.setPrefixedKey(prefixedKey);
