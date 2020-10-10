@@ -4,6 +4,8 @@ import com.sohu.smc.md.cache.util.PrefixedKeyUtils;
 import com.sohu.smc.md.cache.anno.MdBatchCache;
 import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
 import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
  * @since 2020/9/29
  */
 @Component
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class MdBatchCacheOp extends AbstractOp<MdBatchCache> {
 
     public MdBatchCacheOp(MetaData<MdBatchCache> metaData) {

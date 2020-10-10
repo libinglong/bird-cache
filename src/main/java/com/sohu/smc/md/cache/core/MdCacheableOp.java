@@ -1,6 +1,8 @@
 package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.anno.MdCacheable;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 /**
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Component;
  * @since 2020/9/29
  */
 @Component
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class MdCacheableOp extends AbstractOp<MdCacheable> {
 
     public MdCacheableOp(MetaData<MdCacheable> metaData) {
@@ -25,10 +28,6 @@ public class MdCacheableOp extends AbstractOp<MdCacheable> {
         return byte2ValueWrapper(cache.get(key));
     }
 
-    public void put(byte[] key, Object value) throws RuntimeException {
-        cache.put(key,value);
-    }
-
     @Override
     protected String getKeyExpr() {
         return metaData.getAnno()
@@ -41,7 +40,7 @@ public class MdCacheableOp extends AbstractOp<MdCacheable> {
         if (valueWrapper == null){
             Object result = invocationContext.getMethodInvocation()
                     .proceed();
-            put(prefixedKeyBytes, result);
+            cache.put(prefixedKeyBytes, serializer.serialize(result));
             return result;
         }
         return valueWrapper.get();

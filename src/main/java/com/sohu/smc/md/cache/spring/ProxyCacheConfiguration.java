@@ -15,7 +15,7 @@ import org.springframework.core.type.AnnotationMetadata;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/7
  */
-@ComponentScan
+@ComponentScan(basePackages = "com.sohu.smc.md.cache")
 @Configuration
 public class ProxyCacheConfiguration implements ImportAware {
 

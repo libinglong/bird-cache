@@ -29,7 +29,7 @@ public interface Cache {
      * @param key the key of this cache
      * @param val the value to be updated of this cache
      */
-    void put(byte[] key, Object val);
+    void put(byte[] key, byte[] val);
 
     /**
      * 添加缓存
@@ -42,26 +42,14 @@ public interface Cache {
      * @param key the key of this cache
      * @return 缓存的对象.如果缓存未命中,返回null;如果缓存的值为null,返回{@link NullValue#NULL},
      */
-    byte[] get(Object key);
+    byte[] get(byte[] key);
 
     /**
      * 批量缓存查询需要实现此接口,来达到更好的性能
      * 参数和返回值顺序必须是对应的
-     * 返回的list中的Object规则参见{@link Cache#get(java.lang.Object)}
      * @param keys the keys of this cache
-     * @return the list mapping to keys
+     * @return the list mapping to keys in order
      */
     List<byte[]> get(List<byte[]> keys);
-
-    /**
-     * evict the key of this cache
-     * @param key the key to be evicted of this cache
-     */
-    void evict(byte[] key);
-
-    /**
-     * remove all mappings from this cache.
-     */
-    void clear();
 
 }
