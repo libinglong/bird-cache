@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-public class MdCacheEvictOp extends AbstractOp<MdCacheEvict> {
+public class MdCacheEvictOpAbstract extends AbstractKeyOp<MdCacheEvict> {
 
     @Autowired
     private Cache cache;
@@ -22,7 +22,7 @@ public class MdCacheEvictOp extends AbstractOp<MdCacheEvict> {
     @Autowired
     private CacheProperties cacheProperties;
 
-    public MdCacheEvictOp(MetaData<MdCacheEvict> metaData) {
+    public MdCacheEvictOpAbstract(MetaData<MdCacheEvict> metaData) {
         super(metaData);
     }
 

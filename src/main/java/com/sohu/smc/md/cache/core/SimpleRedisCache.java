@@ -8,6 +8,9 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.codec.ByteArrayCodec;
+import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
+import io.lettuce.core.pubsub.api.sync.RedisPubSubCommands;
+import org.springframework.beans.factory.InitializingBean;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,19 +22,14 @@ import java.util.concurrent.ExecutionException;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/10
  */
-public class SimpleRedisCache implements Cache {
+public class SimpleRedisCache implements Cache, InitializingBean {
 
     RedisCommands<byte[], byte[]> syncCommand;
     RedisAsyncCommands<byte[], byte[]> asyncCommands;
+    RedisURI redisURI;
 
     public SimpleRedisCache(RedisURI redisURI) {
-        RedisClient redisClient = RedisClient.create(redisURI);
-        redisClient.setOptions(ClientOptions.builder()
-                .autoReconnect(false)
-                .build());
-        StatefulRedisConnection<byte[], byte[]> connection = redisClient.connect(ByteArrayCodec.INSTANCE);
-        syncCommand = connection.sync();
-        asyncCommands = connection.async();
+        this.redisURI = redisURI;
     }
 
     @Override
@@ -74,4 +72,19 @@ public class SimpleRedisCache implements Cache {
         return result;
     }
 
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        RedisClient redisClient = RedisClient.create(redisURI);
+        redisClient.setOptions(ClientOptions.builder()
+                .autoReconnect(false)
+                .build());
+        StatefulRedisConnection<byte[], byte[]> connection = redisClient.connect(ByteArrayCodec.INSTANCE);
+        syncCommand = connection.sync();
+        asyncCommands = connection.async();
+
+
+        StatefulRedisPubSubConnection<byte[], byte[]> pubSubConnection = redisClient.connectPubSub(ByteArrayCodec.INSTANCE);
+        RedisPubSubCommands<byte[], byte[]> sync = pubSubConnection.sync();
+        sync.subscribe();
+    }
 }

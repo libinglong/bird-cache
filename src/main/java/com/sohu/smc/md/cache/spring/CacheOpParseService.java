@@ -82,16 +82,16 @@ public class CacheOpParseService implements ApplicationContextAware {
     }
 
     private Class<? extends Annotation> getAnnoByOp(Class<?> op){
-        if (MdCacheableOp.class.equals(op)){
+        if (MdCacheableOpAbstract.class.equals(op)){
             return MdCacheable.class;
         }
         else if (MdBatchCacheOp.class.equals(op)){
             return MdBatchCache.class;
         }
-        else if (MdCacheEvictOp.class.equals(op)){
+        else if (MdCacheEvictOpAbstract.class.equals(op)){
             return MdCacheEvict.class;
         }
-        else if (MdCachePutOp.class.equals(op)){
+        else if (MdCachePutOpAbstract.class.equals(op)){
             return MdCachePut.class;
         }
         else {

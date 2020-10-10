@@ -21,13 +21,13 @@ public class InvocationContext {
         this.methodInvocation = methodInvocation;
     }
 
-    private Map<AbstractOp<?>, OpContext> opContextMap = new ConcurrentHashMap<>(4);
+    private Map<AbstractKeyOp<?>, OpContext> opContextMap = new ConcurrentHashMap<>(4);
 
     public MethodInvocation getMethodInvocation() {
         return methodInvocation;
     }
 
-    public OpContext getOpContext(AbstractOp<?> abstractOp) {
-        return opContextMap.computeIfAbsent(abstractOp, abstractOpTmp -> new OpContext());
+    public OpContext getOpContext(AbstractKeyOp<?> abstractKeyOp) {
+        return opContextMap.computeIfAbsent(abstractKeyOp, abstractOpTmp -> new OpContext());
     }
 }

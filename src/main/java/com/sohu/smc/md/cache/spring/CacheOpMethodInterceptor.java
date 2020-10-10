@@ -23,9 +23,9 @@ public class CacheOpMethodInterceptor implements MethodInterceptor {
     public Object invoke(MethodInvocation invocation) throws Throwable {
         InvocationContext invocationContext = new InvocationContext(invocation);
         Method method = invocation.getMethod();
-        List<MdCacheEvictOp> evictOps = cacheOpParseService.getOps(method, MdCacheEvictOp.class);
-        List<MdCachePutOp> putOps = cacheOpParseService.getOps(method, MdCachePutOp.class);
-        MdCacheableOp cacheableOp = cacheOpParseService.getOp(method, MdCacheableOp.class);
+        List<MdCacheEvictOpAbstract> evictOps = cacheOpParseService.getOps(method, MdCacheEvictOpAbstract.class);
+        List<MdCachePutOpAbstract> putOps = cacheOpParseService.getOps(method, MdCachePutOpAbstract.class);
+        MdCacheableOpAbstract cacheableOp = cacheOpParseService.getOp(method, MdCacheableOpAbstract.class);
         MdBatchCacheOp batchCacheOp = cacheOpParseService.getOp(method, MdBatchCacheOp.class);
         boolean twoCacheOpsExist = cacheableOp != null && batchCacheOp != null;
         Assert.isTrue(!twoCacheOpsExist, "MdCacheable and MdBatchCacheOp can not exist at the same time");
@@ -44,7 +44,7 @@ public class CacheOpMethodInterceptor implements MethodInterceptor {
         return result;
     }
 
-    private Object processCacheableOp(MdCacheableOp cacheableOp, InvocationContext invocationContext) throws Throwable {
+    private Object processCacheableOp(MdCacheableOpAbstract cacheableOp, InvocationContext invocationContext) throws Throwable {
         return cacheableOp.processCacheableOp(invocationContext);
     }
 

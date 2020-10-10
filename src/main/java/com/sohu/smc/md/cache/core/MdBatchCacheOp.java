@@ -2,7 +2,7 @@ package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.anno.MdBatchCache;
 import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
-import com.sohu.smc.md.cache.util.PrefixedKeyUtils;
+import com.sohu.smc.md.cache.util.ByteArrayUtils;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  */
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-public class MdBatchCacheOp extends AbstractOp<MdBatchCache> {
+public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
 
     public MdBatchCacheOp(MetaData<MdBatchCache> metaData) {
         super(metaData);
@@ -39,7 +39,7 @@ public class MdBatchCacheOp extends AbstractOp<MdBatchCache> {
             EvaluationContext ctx = new ParamEvaluationContext(methodInvocation.getArguments());
             ctx.setVariable("obj", o);
             byte[] rawKey = serializer.serialize(keyExpression.getValue(ctx));
-            byte[] prefixedKey = PrefixedKeyUtils.getPrefixedKey(prefix, rawKey);
+            byte[] prefixedKey = ByteArrayUtils.combine(cacheSpace.getPrefix(cacheSpaceName), rawKey);
             BatchEntry batchEntry = new BatchEntry();
             batchEntry.setKeyObj(o);
             batchEntry.setPrefixedKey(prefixedKey);
