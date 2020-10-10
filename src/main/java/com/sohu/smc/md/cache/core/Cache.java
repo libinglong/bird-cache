@@ -28,14 +28,17 @@ public interface Cache {
      * 添加缓存
      * @param key the key of this cache
      * @param val the value to be updated of this cache
+     * @param time time to expire in ms
      */
-    void put(byte[] key, byte[] val);
+    void set(byte[] key, byte[] val, long time);
 
     /**
      * 添加缓存
      * @param kvs
+     * @param time time time to expire in ms
+     * @throws Exception e
      */
-    void put(Map<byte[],byte[]> kvs);
+    void set(Map<byte[],byte[]> kvs, long time) throws Exception;
 
     /**
      * 缓存查询

@@ -101,7 +101,7 @@ public class MdBatchCacheOp extends AbstractOp<MdBatchCache> {
         }
         Map<byte[], byte[]> kvs = missingBatchEntries.stream()
                 .collect(Collectors.toMap(BatchEntry::getPrefixedKey, this::serialize));
-        cache.put(kvs);
+        cache.set(kvs, cacheProperties.getExpireTime());
         return batchEntries.stream()
                 .map(batchEntry -> batchEntry.getValueWrapper().get())
                 .collect(Collectors.toList());

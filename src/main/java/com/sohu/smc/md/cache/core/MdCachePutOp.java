@@ -30,8 +30,8 @@ public class MdCachePutOp extends AbstractOp<MdCachePut> {
         cache.expire(getPrefixedKey(invocationContext),cacheProperties.getExpireTime());
     }
 
-    public void put(InvocationContext invocationContext, Object value){
-        cache.put(getPrefixedKey(invocationContext), serializer.serialize(value));
+    public void set(InvocationContext invocationContext, Object value){
+        cache.set(getPrefixedKey(invocationContext), serializer.serialize(value), cacheProperties.getExpireTime());
     }
 
     @Override

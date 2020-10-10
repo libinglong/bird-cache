@@ -40,7 +40,7 @@ public class MdCacheableOp extends AbstractOp<MdCacheable> {
         if (valueWrapper == null){
             Object result = invocationContext.getMethodInvocation()
                     .proceed();
-            cache.put(prefixedKeyBytes, serializer.serialize(result));
+            cache.set(prefixedKeyBytes, serializer.serialize(result), cacheProperties.getExpireTime());
             return result;
         }
         return valueWrapper.get();

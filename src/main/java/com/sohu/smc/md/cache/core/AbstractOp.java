@@ -1,6 +1,7 @@
 package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.serializer.Serializer;
+import com.sohu.smc.md.cache.spring.CacheProperties;
 import com.sohu.smc.md.cache.spring.SpelParseService;
 import com.sohu.smc.md.cache.util.PrefixedKeyUtils;
 import org.springframework.beans.factory.InitializingBean;
@@ -33,6 +34,9 @@ public abstract class AbstractOp<A extends Annotation> implements InitializingBe
 
     @Autowired
     protected Serializer serializer;
+
+    @Autowired
+    protected CacheProperties cacheProperties;
 
     public AbstractOp(MetaData<A> metaData) {
         this.metaData = metaData;

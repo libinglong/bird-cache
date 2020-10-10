@@ -39,7 +39,7 @@ public class CacheOpMethodInterceptor implements MethodInterceptor {
         } else {
             result = invocation.proceed();
         }
-        putOps.forEach(mdCachePutOp -> mdCachePutOp.put(invocationContext, result));
+        putOps.forEach(mdCachePutOp -> mdCachePutOp.set(invocationContext, result));
         evictOps.forEach(mdCacheEvictOp -> mdCacheEvictOp.delete(invocationContext));
         return result;
     }
