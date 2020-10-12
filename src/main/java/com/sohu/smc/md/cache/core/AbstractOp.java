@@ -14,7 +14,8 @@ public class AbstractOp<A extends Annotation> implements InitializingBean {
 
     protected MetaData<A> metaData;
 
-    protected String cacheSpaceName;
+    protected String cacheSpaceKey;
+    protected String cacheSpaceVersionKey;
 
     @Autowired
     protected CacheSpace cacheSpace;
@@ -25,6 +26,7 @@ public class AbstractOp<A extends Annotation> implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        this.cacheSpaceName = metaData.getMethod().getDeclaringClass().getName();
+        this.cacheSpaceKey = metaData.getMethod().getDeclaringClass().getName();
+        this.cacheSpaceVersionKey = "v:" + cacheSpaceKey;
     }
 }

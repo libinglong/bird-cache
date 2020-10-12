@@ -39,7 +39,7 @@ public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
             EvaluationContext ctx = new ParamEvaluationContext(methodInvocation.getArguments());
             ctx.setVariable("obj", o);
             byte[] rawKey = serializer.serialize(keyExpression.getValue(ctx));
-            byte[] prefixedKey = ByteArrayUtils.combine(cacheSpace.getPrefix(cacheSpaceName), rawKey);
+            byte[] prefixedKey = ByteArrayUtils.combine(cacheSpace.getVersion(cacheSpaceVersionKey), rawKey);
             BatchEntry batchEntry = new BatchEntry();
             batchEntry.setKeyObj(o);
             batchEntry.setPrefixedKey(prefixedKey);

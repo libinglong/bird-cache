@@ -12,9 +12,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-public class MdCacheableOpAbstract extends AbstractKeyOp<MdCacheable> {
+public class MdCacheableOp extends AbstractKeyOp<MdCacheable> {
 
-    public MdCacheableOpAbstract(MetaData<MdCacheable> metaData) {
+    public MdCacheableOp(MetaData<MdCacheable> metaData) {
         super(metaData);
     }
 

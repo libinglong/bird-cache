@@ -57,7 +57,7 @@ public abstract class AbstractKeyOp<A extends Annotation> extends AbstractOp<A> 
         }
         EvaluationContext context = new ParamEvaluationContext(invocationContext.getMethodInvocation().getArguments());
         byte[] rawKey = serializer.serialize(keyExpression.getValue(context));
-        byte[] prefixedKey = ByteArrayUtils.combine(cacheSpace.getPrefix(cacheSpaceName), rawKey);
+        byte[] prefixedKey = ByteArrayUtils.combine(cacheSpace.getVersion(cacheSpaceVersionKey), rawKey);
         opContext.setPrefixedKey(prefixedKey);
         return prefixedKey;
     }

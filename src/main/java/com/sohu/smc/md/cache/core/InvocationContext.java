@@ -7,7 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 此类用于缓存一些中间变量
- * 每个方法对应一个InvocationContext,多个AbstractOp
+ * 每个方法的一次调用对应一个InvocationContext
+ * 每个方法对应多个AbstractOp
  * 因此一个InvocationContext对应多个AbstractOp
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>

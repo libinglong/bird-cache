@@ -1,6 +1,6 @@
 package com.sohu.smc.md.cache.core;
 
-import com.sohu.smc.md.cache.anno.MdCacheEvict;
+import com.sohu.smc.md.cache.anno.MdCachePut;
 import com.sohu.smc.md.cache.spring.CacheProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-public class MdCacheEvictOpAbstract extends AbstractKeyOp<MdCacheEvict> {
+public class MdCachePutOp extends AbstractKeyOp<MdCachePut> {
 
     @Autowired
     private Cache cache;
@@ -22,7 +22,7 @@ public class MdCacheEvictOpAbstract extends AbstractKeyOp<MdCacheEvict> {
     @Autowired
     private CacheProperties cacheProperties;
 
-    public MdCacheEvictOpAbstract(MetaData<MdCacheEvict> metaData) {
+    public MdCachePutOp(MetaData<MdCachePut> metaData) {
         super(metaData);
     }
 
@@ -30,8 +30,8 @@ public class MdCacheEvictOpAbstract extends AbstractKeyOp<MdCacheEvict> {
         cache.expire(getPrefixedKey(invocationContext),cacheProperties.getExpireTime());
     }
 
-    public void delete(InvocationContext invocationContext) throws RuntimeException {
-        cache.delete(getPrefixedKey(invocationContext));
+    public void set(InvocationContext invocationContext, Object value){
+        cache.set(getPrefixedKey(invocationContext), serializer.serialize(value), cacheProperties.getExpireTime());
     }
 
     @Override

@@ -19,7 +19,7 @@ public class MdCacheClearOp extends AbstractOp<MdCacheClear> {
     }
 
     public void clear(){
-        cacheSpace.remove(cacheSpaceName);
+        cacheSpace.incrVersion(cacheSpaceVersionKey);
     }
 
 }

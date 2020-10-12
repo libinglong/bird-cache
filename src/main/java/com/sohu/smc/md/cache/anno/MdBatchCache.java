@@ -3,6 +3,7 @@ package com.sohu.smc.md.cache.anno;
 import java.lang.annotation.*;
 
 /**
+ * 该注解要求返回值和参数必须是List,且参数和返回值的按顺序一一映射.如果无法按顺序映射,则缓存会出现错误
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/7

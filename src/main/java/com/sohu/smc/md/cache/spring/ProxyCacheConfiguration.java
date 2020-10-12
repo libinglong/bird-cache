@@ -1,7 +1,6 @@
 package com.sohu.smc.md.cache.spring;
 
 import com.sohu.smc.md.cache.anno.EnableMdCaching;
-import org.aopalliance.intercept.MethodInterceptor;
 import org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -25,15 +24,15 @@ public class ProxyCacheConfiguration implements ImportAware {
     public DefaultBeanFactoryPointcutAdvisor cacheAdvisor() {
         DefaultBeanFactoryPointcutAdvisor advisor =
                 new DefaultBeanFactoryPointcutAdvisor();
-        advisor.setPointcut(new CacheSourcePointcut());
-        advisor.setAdvice(cacheInterceptor());
+        advisor.setPointcut(cacheOpInvocation());
+        advisor.setAdvice(cacheOpInvocation());
         advisor.setOrder(this.enableMdCaching.<Integer>getNumber("order"));
         return advisor;
     }
 
     @Bean
-    public MethodInterceptor cacheInterceptor() {
-        return new CacheOpMethodInterceptor();
+    public CacheOpInvocation cacheOpInvocation() {
+        return new CacheOpInvocation();
     }
 
     @Override

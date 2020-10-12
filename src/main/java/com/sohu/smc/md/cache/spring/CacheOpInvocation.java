@@ -3,32 +3,46 @@ package com.sohu.smc.md.cache.spring;
 import com.sohu.smc.md.cache.core.*;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.support.StaticMethodMatcherPointcut;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.Assert;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/30
  */
-public class CacheOpMethodInterceptor implements MethodInterceptor {
+public class CacheOpInvocation extends StaticMethodMatcherPointcut implements MethodInterceptor {
 
     @Autowired
     private CacheOpParseService cacheOpParseService;
 
+    private Map<Method,MethodOpContext> contextMap = new ConcurrentHashMap<>(256);
+
+    @Override
+    public boolean matches(Method method, Class<?> targetClass) {
+        MethodOpContext methodOpContext = cacheOpParseService.getContext(method);
+        contextMap.put(method,methodOpContext);
+        methodOpContext.validate();
+        return methodOpContext.hasAnyOp();
+    }
+
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
         InvocationContext invocationContext = new InvocationContext(invocation);
-        Method method = invocation.getMethod();
-        List<MdCacheEvictOpAbstract> evictOps = cacheOpParseService.getOps(method, MdCacheEvictOpAbstract.class);
-        List<MdCachePutOpAbstract> putOps = cacheOpParseService.getOps(method, MdCachePutOpAbstract.class);
-        MdCacheableOpAbstract cacheableOp = cacheOpParseService.getOp(method, MdCacheableOpAbstract.class);
-        MdBatchCacheOp batchCacheOp = cacheOpParseService.getOp(method, MdBatchCacheOp.class);
-        boolean twoCacheOpsExist = cacheableOp != null && batchCacheOp != null;
-        Assert.isTrue(!twoCacheOpsExist, "MdCacheable and MdBatchCacheOp can not exist at the same time");
+        MethodOpContext methodOpContext = contextMap.get(invocation.getMethod());
+        List<MdCacheEvictOp> evictOps = methodOpContext.getEvictOps();
+        List<MdCachePutOp> putOps = methodOpContext.getPutOps();
+        MdCacheableOp cacheableOp = methodOpContext.getCacheableOp();
+        MdBatchCacheOp batchCacheOp = methodOpContext.getBatchCacheOp();
+        MdCacheClearOp clearOp = methodOpContext.getClearOp();
+        if (clearOp != null){
+            clearOp.clear();
+        }
         evictOps.forEach(mdCacheEvictOp -> mdCacheEvictOp.expire(invocationContext));
         putOps.forEach(mdCachePutOp -> mdCachePutOp.expire(invocationContext));
         Object result;
@@ -44,7 +58,7 @@ public class CacheOpMethodInterceptor implements MethodInterceptor {
         return result;
     }
 
-    private Object processCacheableOp(MdCacheableOpAbstract cacheableOp, InvocationContext invocationContext) throws Throwable {
+    private Object processCacheableOp(MdCacheableOp cacheableOp, InvocationContext invocationContext) throws Throwable {
         return cacheableOp.processCacheableOp(invocationContext);
     }
 
