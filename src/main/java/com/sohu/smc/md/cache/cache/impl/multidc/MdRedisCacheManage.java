@@ -6,7 +6,6 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.codec.StringCodec;
-import org.springframework.context.ApplicationContext;
 import org.springframework.util.Assert;
 
 /**
@@ -18,7 +17,6 @@ public class MdRedisCacheManage extends SingleRedisCacheManage {
 
     private RedisClient secondaryRedisClient;
     private RedisAsyncCommands<String, String> secondaryAsyncCommand;
-    private ApplicationContext applicationContext;
 
     public MdRedisCacheManage(RedisURI redisURI, RedisURI secondaryRedisURI) {
         super(redisURI);
