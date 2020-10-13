@@ -17,9 +17,6 @@ import org.springframework.stereotype.Component;
 public class MdCachePutOp extends AbstractKeyOp<MdCachePut> {
 
     @Autowired
-    private Cache cache;
-
-    @Autowired
     private CacheProperties cacheProperties;
 
     public MdCachePutOp(MetaData<MdCachePut> metaData, Cache cache) {
