@@ -94,7 +94,8 @@ public class SingleRedisCache implements Cache, InitializingBean {
     }
 
     protected Object processSpace(Object key) {
-        return new SpaceWrapper(cacheSpace.getVersion(cacheSpaceVersionKey), key);
+        String version = cacheSpace.getVersion(cacheSpaceVersionKey);
+        return new SpaceWrapper(cacheSpaceName + version, key);
     }
 
     protected void doExpire(Object keyWithSpace, long milliseconds) {

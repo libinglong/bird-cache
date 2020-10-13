@@ -27,7 +27,10 @@ public class MdRedisCache extends SingleRedisCache {
     @Override
     public void doExpire(Object keyWithSpace, long milliseconds) {
         super.doExpire(keyWithSpace, milliseconds);
-        secondaryAsyncCommand.expire(keyWithSpace,milliseconds);
+        secondaryAsyncCommand.expire(keyWithSpace,milliseconds)
+                .thenApply(aBoolean -> {
+
+                })
     }
 
     @Override
