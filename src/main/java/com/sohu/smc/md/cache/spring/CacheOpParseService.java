@@ -3,6 +3,7 @@ package com.sohu.smc.md.cache.spring;
 import com.sohu.smc.md.cache.anno.*;
 import com.sohu.smc.md.cache.core.*;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -20,6 +21,9 @@ import java.util.stream.Collectors;
  */
 @Service
 public class CacheOpParseService implements ApplicationContextAware {
+
+    @Autowired
+    private CacheManage cacheManage;
 
     private ApplicationContext ctx;
 
@@ -53,7 +57,9 @@ public class CacheOpParseService implements ApplicationContextAware {
         metaData.setMethod(method);
         metaData.setOpCls(opCls);
         metaData.setAnno(anno);
-        return ctx.getBean(opCls, metaData);
+        String cacheSpaceName = method.getDeclaringClass()
+                .getName();
+        return ctx.getBean(opCls, metaData, cacheManage.getCache(cacheSpaceName));
     }
 
     private Class<? extends Annotation> getAnnoByOp(Class<?> op){

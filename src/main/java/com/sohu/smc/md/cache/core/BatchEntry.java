@@ -10,8 +10,8 @@ import lombok.Data;
 @Data
 public class BatchEntry {
 
-    private byte[] prefixedKey;
     private Object keyObj;
+    private Object originObj;
     private ValueWrapper valueWrapper;
 
 }

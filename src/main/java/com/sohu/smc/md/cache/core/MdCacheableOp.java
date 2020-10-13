@@ -14,18 +14,18 @@ import org.springframework.stereotype.Component;
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class MdCacheableOp extends AbstractKeyOp<MdCacheable> {
 
-    public MdCacheableOp(MetaData<MdCacheable> metaData) {
-        super(metaData);
+    public MdCacheableOp(MetaData<MdCacheable> metaData, Cache cache) {
+        super(metaData, cache);
     }
 
     /**
      *
-     * @param key
-     * @throws RuntimeException
+     * @param key key
+     * @throws RuntimeException e
      * @return 返回null表示缓存没有命中,如果命中,返回{@link NullValue#NULL}表示缓存的值为null
      */
-    public ValueWrapper getCacheValue(byte[] key) throws RuntimeException {
-        return byte2ValueWrapper(cache.get(key));
+    public ValueWrapper getCacheValue(Object key) throws RuntimeException {
+        return wrapper(cache.get(key));
     }
 
     @Override
@@ -35,12 +35,12 @@ public class MdCacheableOp extends AbstractKeyOp<MdCacheable> {
     }
 
     public Object processCacheableOp(InvocationContext invocationContext) throws Throwable {
-        byte[] prefixedKeyBytes = getPrefixedKey(invocationContext);
-        ValueWrapper valueWrapper = getCacheValue(prefixedKeyBytes);
+        Object key = getKey(invocationContext);
+        ValueWrapper valueWrapper = getCacheValue(key);
         if (valueWrapper == null){
             Object result = invocationContext.getMethodInvocation()
                     .proceed();
-            cache.set(prefixedKeyBytes, serializer.serialize(result), cacheProperties.getExpireTime());
+            cache.set(key, result, cacheProperties.getExpireTime());
             return result;
         }
         return valueWrapper.get();

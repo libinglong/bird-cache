@@ -21,11 +21,11 @@ public class ProxyCacheConfiguration implements ImportAware {
     protected AnnotationAttributes enableMdCaching;
 
     @Bean
-    public DefaultBeanFactoryPointcutAdvisor cacheAdvisor() {
+    public DefaultBeanFactoryPointcutAdvisor cacheAdvisor(CacheOpInvocation cacheOpInvocation) {
         DefaultBeanFactoryPointcutAdvisor advisor =
                 new DefaultBeanFactoryPointcutAdvisor();
-        advisor.setPointcut(cacheOpInvocation());
-        advisor.setAdvice(cacheOpInvocation());
+        advisor.setPointcut(cacheOpInvocation);
+        advisor.setAdvice(cacheOpInvocation);
         advisor.setOrder(this.enableMdCaching.<Integer>getNumber("order"));
         return advisor;
     }

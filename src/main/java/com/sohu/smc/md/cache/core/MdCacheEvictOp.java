@@ -17,21 +17,18 @@ import org.springframework.stereotype.Component;
 public class MdCacheEvictOp extends AbstractKeyOp<MdCacheEvict> {
 
     @Autowired
-    private Cache cache;
-
-    @Autowired
     private CacheProperties cacheProperties;
 
-    public MdCacheEvictOp(MetaData<MdCacheEvict> metaData) {
-        super(metaData);
+    public MdCacheEvictOp(MetaData<MdCacheEvict> metaData, Cache cache) {
+        super(metaData, cache);
     }
 
     public void expire(InvocationContext invocationContext) throws RuntimeException {
-        cache.expire(getPrefixedKey(invocationContext),cacheProperties.getExpireTime());
+        cache.expire(getKey(invocationContext),cacheProperties.getExpireTime());
     }
 
     public void delete(InvocationContext invocationContext) throws RuntimeException {
-        cache.delete(getPrefixedKey(invocationContext));
+        cache.delete(getKey(invocationContext));
     }
 
     @Override

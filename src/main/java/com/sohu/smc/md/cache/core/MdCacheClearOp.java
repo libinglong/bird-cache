@@ -14,12 +14,12 @@ import org.springframework.stereotype.Component;
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class MdCacheClearOp extends AbstractOp<MdCacheClear> {
 
-    public MdCacheClearOp(MetaData<MdCacheClear> metaData) {
-        super(metaData);
+    public MdCacheClearOp(MetaData<MdCacheClear> metaData, Cache cache) {
+        super(metaData, cache);
     }
 
     public void clear(){
-        cacheSpace.incrVersion(cacheSpaceVersionKey);
+        cache.clear();
     }
 
 }

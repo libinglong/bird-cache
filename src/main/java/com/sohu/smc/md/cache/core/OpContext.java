@@ -7,13 +7,13 @@ package com.sohu.smc.md.cache.core;
  */
 public class OpContext {
 
-    private byte[] prefixedKey;
+    private Object key;
 
-    public byte[] getPrefixedKey() {
-        return prefixedKey;
+    public Object getKey() {
+        return key;
     }
 
-    public void setPrefixedKey(byte[] prefixedKey) {
-        this.prefixedKey = prefixedKey;
+    public void setKey(Object key) {
+        this.key = key;
     }
 }

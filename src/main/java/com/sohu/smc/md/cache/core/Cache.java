@@ -12,41 +12,47 @@ import java.util.concurrent.ExecutionException;
 public interface Cache {
 
     /**
+     * 缓存空间,用于隔离不同的缓存
+     * @return
+     */
+    String getCacheSpaceName();
+
+    /**
      * 设置key的过期时间
      * key在time指定的时间后过期
      * @param key the key of this cache
-     * @param time time to expire in ms
+     * @param milliseconds time to expire in ms
      */
-    void expire(byte[] key, long time);
+    void expire(Object key, long milliseconds);
 
     /**
      * 删除key
      * @param key the key of this cache
      */
-    void delete(byte[] key);
+    void delete(Object key);
 
     /**
      * 添加缓存
      * @param key the key of this cache
      * @param val the value to be updated of this cache
-     * @param time time to expire in ms
+     * @param milliseconds time to expire in ms
      */
-    void set(byte[] key, byte[] val, long time);
+    void set(Object key, Object val, long milliseconds);
 
     /**
      * 添加缓存
      * @param kvs
-     * @param time time time to expire in ms
+     * @param milliseconds time time to expire in ms
      * @throws Exception e
      */
-    void set(Map<byte[],byte[]> kvs, long time) throws ExecutionException, InterruptedException;
+    void set(Map<Object,Object> kvs, long milliseconds) throws ExecutionException, InterruptedException;
 
     /**
      * 缓存查询
      * @param key the key of this cache
      * @return 缓存的对象.如果缓存未命中,返回null;如果缓存的值为null,返回{@link NullValue#NULL},
      */
-    byte[] get(byte[] key);
+    Object get(Object key);
 
     /**
      * 批量缓存查询需要实现此接口,来达到更好的性能
@@ -54,6 +60,11 @@ public interface Cache {
      * @param keys the keys of this cache
      * @return the list mapping to keys in order
      */
-    List<byte[]> get(List<byte[]> keys) throws ExecutionException, InterruptedException;
+    List<Object> get(List<Object> keys) throws ExecutionException, InterruptedException;
+
+    /**
+     * 清空缓存
+     */
+    void clear();
 
 }

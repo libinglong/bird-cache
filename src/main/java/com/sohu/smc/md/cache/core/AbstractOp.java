@@ -1,6 +1,6 @@
 package com.sohu.smc.md.cache.core;
 
-import org.springframework.beans.factory.InitializingBean;
+import com.sohu.smc.md.cache.spring.CacheProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.annotation.Annotation;
@@ -10,23 +10,16 @@ import java.lang.annotation.Annotation;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/10
  */
-public class AbstractOp<A extends Annotation> implements InitializingBean {
-
-    protected MetaData<A> metaData;
-
-    protected String cacheSpaceKey;
-    protected String cacheSpaceVersionKey;
+public class AbstractOp<A extends Annotation> {
 
     @Autowired
-    protected CacheSpace cacheSpace;
+    protected CacheProperties cacheProperties;
 
-    public AbstractOp(MetaData<A> metaData) {
+    protected MetaData<A> metaData;
+    protected Cache cache;
+
+    public AbstractOp(MetaData<A> metaData, Cache cache) {
         this.metaData = metaData;
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        this.cacheSpaceKey = metaData.getMethod().getDeclaringClass().getName();
-        this.cacheSpaceVersionKey = "v:" + cacheSpaceKey;
+        this.cache = cache;
     }
 }

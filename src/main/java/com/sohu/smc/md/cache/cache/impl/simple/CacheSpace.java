@@ -1,4 +1,4 @@
-package com.sohu.smc.md.cache.core;
+package com.sohu.smc.md.cache.cache.impl.simple;
 
 /**
  * @author binglongli217932
@@ -18,6 +18,6 @@ public interface CacheSpace {
      * @param cacheSpaceVersionKey
      * @return
      */
-    byte[] getVersion(String cacheSpaceVersionKey);
+    String getVersion(String cacheSpaceVersionKey);
 
 }
