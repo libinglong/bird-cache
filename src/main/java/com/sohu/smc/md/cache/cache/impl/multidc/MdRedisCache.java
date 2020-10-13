@@ -7,6 +7,9 @@ import com.sohu.smc.md.cache.serializer.PbSerializer;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 import java.util.Base64;
 import java.util.Map;
@@ -18,6 +21,8 @@ import java.util.concurrent.ExecutionException;
  * @since 2020/10/13
  */
 @Slf4j
+@Component
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class MdRedisCache extends SingleRedisCache {
 
     PbSerializer pbSerializer = new PbSerializer();
