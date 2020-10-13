@@ -40,7 +40,7 @@ public class MdRedisCache extends SingleRedisCache {
         super.doExpire(keyWithSpace, milliseconds);
         secondaryAsyncCommand.expire(keyWithSpace,milliseconds)
                 .handle((aBoolean, throwable) -> {
-                    if (!aBoolean || throwable != null){
+                    if (throwable != null){
                         log.info("expire error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
                     }
                     return null;
@@ -52,7 +52,7 @@ public class MdRedisCache extends SingleRedisCache {
         super.doDelete(keyWithSpace);
         secondaryAsyncCommand.del(keyWithSpace)
                 .handle((aLong, throwable) -> {
-                    if (aLong == 0 || throwable != null){
+                    if (throwable != null){
                         log.info("delete error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
                     }
                     return null;
