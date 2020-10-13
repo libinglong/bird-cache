@@ -10,6 +10,7 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
@@ -72,9 +73,10 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
     private long getMaxExecTime(List<MdCacheEvictOp> evictOps, List<MdCachePutOp> putOps){
         return Stream.of(evictOps, putOps)
                 .flatMap(Collection::stream)
+                .filter(op -> op != null && op.getExecTime() != null)
                 .mapToLong(AbstractKeyOp::getExecTime)
                 .max()
-                .getAsLong();
+                .orElse(Long.MAX_VALUE);
     }
 
 }

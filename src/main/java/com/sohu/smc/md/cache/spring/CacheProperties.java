@@ -1,15 +1,17 @@
 package com.sohu.smc.md.cache.spring;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/29
  */
-@Data
-@Builder
+@Getter
+@Setter
+@Accessors(chain = true)
 public class CacheProperties {
 
     private static Long DEFAULT_EXPIRE_TIME = 14 * 24 * 60 * 60 * 1000L;
