@@ -47,5 +47,17 @@ public abstract class AbstractKeyOp<A extends Annotation> extends AbstractOp<A> 
         return keyExpression.getValue(context);
     }
 
+    protected Long getDelayInvalidTime(){
+        return cacheProperties.getExecTime() + cacheProperties.getUnexpectedTime();
+    }
+
+    public Long getExecTime(){
+        return cacheProperties.getExecTime();
+    }
+
+    protected Long getExpiredTime(){
+        return cacheProperties.getExpireTime();
+    }
+
     abstract protected String getKeyExpr();
 }

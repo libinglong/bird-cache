@@ -38,9 +38,8 @@ public class MdCacheableOp extends AbstractKeyOp<MdCacheable> {
         Object key = getKey(invocationContext);
         ValueWrapper valueWrapper = getCacheValue(key);
         if (valueWrapper == null){
-            Object result = invocationContext.getMethodInvocation()
-                    .proceed();
-            cache.set(key, result, cacheProperties.getExpireTime());
+            Object result = invocationContext.doInvoke();
+            cache.set(key, result, getExpiredTime());
             return result;
         }
         return valueWrapper.get();

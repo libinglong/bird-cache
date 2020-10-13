@@ -81,13 +81,13 @@ public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
             batchEntries.get(i)
                     .setValueWrapper(cacheList.get(i));
         }
-        fetchIfMissing(batchEntries, methodInvocation);
+        fetchIfMissing(batchEntries, invocationContext);
         return batchEntries.stream()
                 .map(batchEntry -> batchEntry.getValueWrapper().get())
                 .collect(Collectors.toList());
     }
 
-    private void fetchIfMissing(List<BatchEntry> batchEntries,MethodInvocation methodInvocation)
+    private void fetchIfMissing(List<BatchEntry> batchEntries,InvocationContext invocationContext)
             throws Throwable {
         List<BatchEntry> missingBatchEntries = batchEntries.stream()
                 .filter(batchEntry -> batchEntry.getValueWrapper() == null)
@@ -98,8 +98,9 @@ public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
         List<Object> missingList = missingBatchEntries.stream()
                 .map(BatchEntry::getOriginObj)
                 .collect(Collectors.toList());
-        methodInvocation.getArguments()[getListIndex()] = missingList;
-        Object result = methodInvocation.proceed();
+        invocationContext.getMethodInvocation()
+                .getArguments()[getListIndex()] = missingList;
+        Object result = invocationContext.doInvoke();
         List<?> missingValueList = (List<?>) result;
         for (int i = 0; i < missingBatchEntries.size(); i++) {
             missingBatchEntries.get(i)
@@ -107,7 +108,7 @@ public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
         }
         Map<Object, Object> kvs = missingBatchEntries.stream()
                 .collect(Collectors.toMap(BatchEntry::getKeyObj, batchEntry -> batchEntry.getValueWrapper().get()));
-        cache.set(kvs, cacheProperties.getExpireTime());
+        cache.set(kvs, getExpiredTime());
     }
 
 }

@@ -1,9 +1,12 @@
 package com.sohu.smc.md.cache.core;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 /**
  * 此类用于缓存一些中间变量
@@ -14,21 +17,39 @@ import java.util.concurrent.ConcurrentHashMap;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/9
  */
+@Slf4j
 public class InvocationContext {
 
+    private static ExecutorService executorService = new ThreadPoolExecutor(20, 50,
+            60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(1024));
+
+    @Getter
     private final MethodInvocation methodInvocation;
+
+    private Map<AbstractKeyOp<?>, OpContext> opContextMap = new ConcurrentHashMap<>(4);
+
+    /**
+     * 执行时间 ms
+     */
+    @Setter
+    private Long execTime;
 
     public InvocationContext(MethodInvocation methodInvocation){
         this.methodInvocation = methodInvocation;
     }
 
-    private Map<AbstractKeyOp<?>, OpContext> opContextMap = new ConcurrentHashMap<>(4);
-
-    public MethodInvocation getMethodInvocation() {
-        return methodInvocation;
-    }
-
     public OpContext getOpContext(AbstractKeyOp<?> abstractKeyOp) {
         return opContextMap.computeIfAbsent(abstractKeyOp, abstractOpTmp -> new OpContext());
     }
+
+    public Object doInvoke() throws Throwable {
+        return executorService.submit(() -> {
+            try {
+                return methodInvocation.proceed();
+            } catch (Throwable throwable) {
+                throw new RuntimeException(throwable);
+            }
+        }).get(execTime, TimeUnit.MILLISECONDS);
+    }
+
 }
