@@ -1,5 +1,6 @@
 package com.sohu.smc.md.cache.cache.impl.simple;
 
+import com.sohu.smc.md.cache.cache.impl.CacheSpace;
 import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.core.CacheManage;
 import io.lettuce.core.RedisClient;
@@ -25,20 +26,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/12
  */
-public class SimpleRedisCacheManage implements CacheManage, CacheSpace, InitializingBean, ApplicationContextAware {
+public class SingleRedisCacheManage implements CacheManage, CacheSpace, InitializingBean, ApplicationContextAware {
 
     private ApplicationContext applicationContext;
 
-    private static final String CACHE_SPACE_CHANGE_CHANNEL = "CACHE_SPACE_CHANGE_CHANNEL";
+    protected static final String CACHE_SPACE_CHANGE_CHANNEL = "CACHE_SPACE_CHANGE_CHANNEL";
 
     private RedisCommands<String, String> stringSyncCommand;
-    private RedisClient redisClient;
+    protected RedisClient redisClient;
 
-    public SimpleRedisCacheManage(RedisURI redisURI) {
+    public SingleRedisCacheManage(RedisURI redisURI) {
         redisClient = RedisClient.create(redisURI);
     }
 
-    public SimpleRedisCacheManage(RedisClient redisClient) {
+    public SingleRedisCacheManage(RedisClient redisClient) {
         this.redisClient = redisClient;
     }
 
@@ -77,26 +78,19 @@ public class SimpleRedisCacheManage implements CacheManage, CacheSpace, Initiali
         pubSubConnection.addListener(new RedisPubSubAdapter<String, String>() {
             @Override
             public void message(String channel, String cacheSpaceName) {
-                Assert.isTrue(CACHE_SPACE_CHANGE_CHANNEL.equals(channel),"unexpected error,channel=" + channel);
                 versionMap.remove(cacheSpaceName);
-            }
-
-            @Override
-            public void subscribed(String channel, long count) {
-                Assert.isTrue(CACHE_SPACE_CHANGE_CHANNEL.equals(channel) && count == 1,
-                        "unexpected error,channel=" + channel + ",count=" + count);
             }
         });
         RedisPubSubCommands<String, String> sync = pubSubConnection.sync();
         sync.subscribe(CACHE_SPACE_CHANGE_CHANNEL);
     }
 
-    private Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
+    protected Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
 
     @Override
     public Cache getCache(String cacheSpaceName) {
         return cacheMap.computeIfAbsent(cacheSpaceName, cacheSpaceName1 ->
-                applicationContext.getBean(SimpleRedisCache.class,cacheSpaceName1, redisClient, this));
+                applicationContext.getBean(SingleRedisCache.class,cacheSpaceName1, redisClient, this));
     }
 
     @Override

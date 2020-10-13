@@ -12,12 +12,6 @@ import java.util.concurrent.ExecutionException;
 public interface Cache {
 
     /**
-     * 缓存空间,用于隔离不同的缓存
-     * @return
-     */
-    String getCacheSpaceName();
-
-    /**
      * 设置key的过期时间
      * key在time指定的时间后过期
      * @param key the key of this cache

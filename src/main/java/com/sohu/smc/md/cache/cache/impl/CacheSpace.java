@@ -1,4 +1,4 @@
-package com.sohu.smc.md.cache.cache.impl.simple;
+package com.sohu.smc.md.cache.cache.impl;
 
 /**
  * @author binglongli217932
