@@ -45,6 +45,7 @@ public class MdRedisCache extends SingleRedisCache {
                 secondaryCommand.expire(keyWithSpace,milliseconds);
             }catch (Exception e){
                 log.info("expire error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
+                log.debug("err",e);
             }
         });
     }
@@ -57,6 +58,7 @@ public class MdRedisCache extends SingleRedisCache {
                 secondaryCommand.del(keyWithSpace);
             }catch (Exception e){
                 log.info("delete error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
+                log.debug("err",e);
             }
         });
     }
@@ -69,6 +71,7 @@ public class MdRedisCache extends SingleRedisCache {
                 secondaryCommand.psetex(keyWithSpace, time, val);
             }catch (Exception e){
                 log.info("set error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
+                log.debug("err",e);
             }
         });
     }
@@ -82,6 +85,7 @@ public class MdRedisCache extends SingleRedisCache {
                         secondaryCommand.psetex(o1, time, o2);
                     } catch (Exception e){
                         log.info("set error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(o1));
+                        log.debug("err",e);
                     }
                 }));
 

@@ -53,7 +53,8 @@ public class MdRedisCacheManage extends SingleRedisCacheManage implements Applic
                 secondaryCommand.incr(cacheSpaceVersionKey);
                 secondaryCommand.publish(CACHE_SPACE_CHANGE_CHANNEL, cacheSpaceVersionKey);
             } catch (Exception e){
-                log.error("cacheSpaceVersionKey={}",cacheSpaceVersionKey,e);
+                log.info("cacheSpaceVersionKey={}",cacheSpaceVersionKey);
+                log.debug("err",e);
             }
         });
 
