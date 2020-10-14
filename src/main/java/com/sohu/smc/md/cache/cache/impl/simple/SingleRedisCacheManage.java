@@ -5,6 +5,7 @@ import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.core.CacheManage;
 import com.sohu.smc.md.cache.serializer.PbSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
+import io.lettuce.core.ClientOptions;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.sync.RedisCommands;
@@ -12,6 +13,7 @@ import io.lettuce.core.codec.StringCodec;
 import io.lettuce.core.pubsub.RedisPubSubAdapter;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import io.lettuce.core.pubsub.api.sync.RedisPubSubCommands;
+import io.lettuce.core.resource.ClientResources;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -38,13 +40,16 @@ public class SingleRedisCacheManage implements CacheManage, CacheSpace, Initiali
     private RedisCommands<String, String> stringSyncCommand;
     protected RedisClient redisClient;
     protected Serializer serializer;
+    protected RedisURI redisURI;
+    protected ClientResources clientResources;
 
     public SingleRedisCacheManage(RedisURI redisURI) {
-        redisClient = RedisClient.create(redisURI);
+        this.redisURI = redisURI;
     }
 
-    public SingleRedisCacheManage(RedisClient redisClient) {
-        this.redisClient = redisClient;
+    public SingleRedisCacheManage(RedisURI redisURI, ClientResources clientResources) {
+        this.redisURI = redisURI;
+        this.clientResources = clientResources;
     }
 
     private ConcurrentReferenceHashMap<String, String> versionMap = new ConcurrentReferenceHashMap<>(256);
@@ -75,7 +80,8 @@ public class SingleRedisCacheManage implements CacheManage, CacheSpace, Initiali
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        Assert.notNull(redisClient,"redisClient can not be null");
+        Assert.notNull(redisURI,"redisURI can not be null");
+        redisClient = initRedisClient(redisURI, clientResources);
         stringSyncCommand = redisClient.connect(StringCodec.UTF8)
                 .sync();
         StatefulRedisPubSubConnection<String, String> pubSubConnection = redisClient.connectPubSub(StringCodec.UTF8);
@@ -90,6 +96,21 @@ public class SingleRedisCacheManage implements CacheManage, CacheSpace, Initiali
         if (serializer == null){
             serializer = new PbSerializer();
         }
+    }
+
+    protected RedisClient initRedisClient(RedisURI redisURI,ClientResources clientResources){
+        RedisClient redisClient;
+        if (clientResources == null){
+            redisClient = RedisClient.create(redisURI);
+        } else {
+            redisClient = RedisClient.create(clientResources, redisURI);
+        }
+        ClientOptions options = ClientOptions.builder()
+                .autoReconnect(true)
+                .disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS)
+                .build();
+        redisClient.setOptions(options);
+        return redisClient;
     }
 
     @PreDestroy

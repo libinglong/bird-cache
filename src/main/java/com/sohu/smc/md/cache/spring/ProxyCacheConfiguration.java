@@ -2,12 +2,11 @@ package com.sohu.smc.md.cache.spring;
 
 import com.sohu.smc.md.cache.anno.EnableMdCaching;
 import org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.ImportAware;
+import org.springframework.context.annotation.*;
 import org.springframework.core.annotation.AnnotationAttributes;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
  * @author binglongli217932
@@ -43,5 +42,14 @@ public class ProxyCacheConfiguration implements ImportAware {
             throw new IllegalArgumentException(
                    "@EnableMdCaching is not present on importing class " + importMetadata.getClassName());
         }
+    }
+
+    @Bean
+    public AsyncTaskExecutor mdInvExecutor(){
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(1024);
+        return executor;
     }
 }

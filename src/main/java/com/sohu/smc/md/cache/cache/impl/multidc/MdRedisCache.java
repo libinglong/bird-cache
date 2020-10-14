@@ -5,10 +5,11 @@ import com.sohu.smc.md.cache.cache.impl.simple.PbObjectRedisCodec;
 import com.sohu.smc.md.cache.cache.impl.simple.SingleRedisCache;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.RedisClient;
-import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.api.sync.RedisCommands;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.util.Base64;
@@ -26,67 +27,71 @@ import java.util.concurrent.ExecutionException;
 public class MdRedisCache extends SingleRedisCache {
 
     private RedisClient secondaryRedisClient;
-    RedisAsyncCommands<Object, Object> secondaryAsyncCommand;
+    RedisCommands<Object, Object> secondaryCommand;
+    private AsyncTaskExecutor asyncTaskExecutor;
 
     public MdRedisCache(String cacheSpaceName, RedisClient redisClient, RedisClient secondaryRedisClient,
-                        CacheSpace cacheSpace, Serializer serializer) {
+                        CacheSpace cacheSpace, Serializer serializer, AsyncTaskExecutor asyncTaskExecutor) {
         super(cacheSpaceName, redisClient, cacheSpace, serializer);
         this.secondaryRedisClient = secondaryRedisClient;
+        this.asyncTaskExecutor = asyncTaskExecutor;
     }
 
     @Override
     public void doExpire(Object keyWithSpace, long milliseconds) {
         super.doExpire(keyWithSpace, milliseconds);
-        secondaryAsyncCommand.expire(keyWithSpace,milliseconds)
-                .exceptionally(throwable -> {
-                    if (throwable != null){
-                        log.info("expire error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
-                    }
-                    return null;
-                });
+        asyncTaskExecutor.submit(() -> {
+            try{
+                secondaryCommand.expire(keyWithSpace,milliseconds);
+            }catch (Exception e){
+                log.info("expire error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
+            }
+        });
     }
 
     @Override
     public void doDelete(Object keyWithSpace) {
         super.doDelete(keyWithSpace);
-        secondaryAsyncCommand.del(keyWithSpace)
-                .exceptionally(throwable -> {
-                    if (throwable != null){
-                        log.info("delete error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
-                    }
-                    return null;
-                });
+        asyncTaskExecutor.submit(() -> {
+            try{
+                secondaryCommand.del(keyWithSpace);
+            }catch (Exception e){
+                log.info("delete error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
+            }
+        });
     }
 
     @Override
     public void doSet(Object keyWithSpace, Object val, long time) {
         super.doSet(keyWithSpace, val, time);
-        secondaryAsyncCommand.psetex(keyWithSpace, time, val)
-                .handle((s, throwable) -> {
-                    if (!"OK".equals(s) || throwable != null){
-                        log.info("set key error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
-                    }
-                    return null;
-                });
+        asyncTaskExecutor.submit(() -> {
+            try{
+                secondaryCommand.psetex(keyWithSpace, time, val);
+            }catch (Exception e){
+                log.info("set error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
+            }
+        });
     }
 
     @Override
     public void doSet(Map<Object, Object> kvsWithSpace, long time) throws ExecutionException, InterruptedException {
         super.doSet(kvsWithSpace, time);
         kvsWithSpace.forEach((o1, o2) ->
-                secondaryAsyncCommand.psetex(o1, time, o2).handle((s, throwable) -> {
-                    if (!"OK".equals(s) || throwable != null){
-                        log.info("set key error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(o1));
+                asyncTaskExecutor.submit(() -> {
+                    try {
+                        secondaryCommand.psetex(o1, time, o2);
+                    } catch (Exception e){
+                        log.info("set error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(o1));
                     }
-                    return null;
                 }));
+
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
         super.afterPropertiesSet();
-        secondaryAsyncCommand = secondaryRedisClient.connect(new PbObjectRedisCodec(serializer))
-                .async();
+        secondaryCommand = secondaryRedisClient.connect(new PbObjectRedisCodec(serializer))
+                .sync();
     }
 
     private String encodeKey2Base64Strinn(Object keyWithSpace){
