@@ -20,6 +20,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.ConcurrentReferenceHashMap;
 import org.springframework.util.StringUtils;
 
+import javax.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -88,6 +89,13 @@ public class SingleRedisCacheManage implements CacheManage, CacheSpace, Initiali
         sync.subscribe(CACHE_SPACE_CHANGE_CHANNEL);
         if (serializer == null){
             serializer = new PbSerializer();
+        }
+    }
+
+    @PreDestroy
+    public void shutdown(){
+        if (redisClient != null){
+            redisClient.shutdown();
         }
     }
 

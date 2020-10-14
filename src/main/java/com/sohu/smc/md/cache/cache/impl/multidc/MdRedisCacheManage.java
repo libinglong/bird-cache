@@ -8,6 +8,8 @@ import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.codec.StringCodec;
 import org.springframework.util.Assert;
 
+import javax.annotation.PreDestroy;
+
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
@@ -47,5 +49,16 @@ public class MdRedisCacheManage extends SingleRedisCacheManage {
     public Cache getCache(String cacheSpaceName) {
         return cacheMap.computeIfAbsent(cacheSpaceName, cacheSpaceName1 ->
                 applicationContext.getBean(MdRedisCache.class,cacheSpaceName1, redisClient, secondaryRedisClient, this, serializer));
+    }
+
+    @Override
+    @PreDestroy
+    public void shutdown(){
+        if (redisClient != null){
+            redisClient.shutdown();
+        }
+        if (secondaryRedisClient != null){
+            secondaryRedisClient.shutdown();
+        }
     }
 }
