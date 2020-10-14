@@ -3,6 +3,8 @@ package com.sohu.smc.md.cache.cache.impl.simple;
 import com.sohu.smc.md.cache.cache.impl.CacheSpace;
 import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.core.CacheManage;
+import com.sohu.smc.md.cache.serializer.PbSerializer;
+import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.sync.RedisCommands;
@@ -34,6 +36,7 @@ public class SingleRedisCacheManage implements CacheManage, CacheSpace, Initiali
 
     private RedisCommands<String, String> stringSyncCommand;
     protected RedisClient redisClient;
+    protected Serializer serializer;
 
     public SingleRedisCacheManage(RedisURI redisURI) {
         redisClient = RedisClient.create(redisURI);
@@ -83,6 +86,9 @@ public class SingleRedisCacheManage implements CacheManage, CacheSpace, Initiali
         });
         RedisPubSubCommands<String, String> sync = pubSubConnection.sync();
         sync.subscribe(CACHE_SPACE_CHANGE_CHANNEL);
+        if (serializer == null){
+            serializer = new PbSerializer();
+        }
     }
 
     protected Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
@@ -90,11 +96,15 @@ public class SingleRedisCacheManage implements CacheManage, CacheSpace, Initiali
     @Override
     public Cache getCache(String cacheSpaceName) {
         return cacheMap.computeIfAbsent(cacheSpaceName, cacheSpaceName1 ->
-                applicationContext.getBean(SingleRedisCache.class,cacheSpaceName1, redisClient, this));
+                applicationContext.getBean(SingleRedisCache.class,cacheSpaceName1, redisClient, this, serializer));
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
+    }
+
+    public void setSerializer(Serializer serializer) {
+        this.serializer = serializer;
     }
 }

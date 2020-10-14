@@ -2,6 +2,7 @@ package com.sohu.smc.md.cache.cache.impl.simple;
 
 import com.sohu.smc.md.cache.cache.impl.CacheSpace;
 import com.sohu.smc.md.cache.core.Cache;
+import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -33,11 +34,13 @@ public class SingleRedisCache implements Cache, InitializingBean {
     private RedisClient redisClient;
     RedisCommands<Object, Object> syncCommand;
     RedisAsyncCommands<Object, Object> asyncCommand;
+    protected Serializer serializer;
 
-    public SingleRedisCache(String cacheSpaceName, RedisClient redisClient, CacheSpace cacheSpace) {
+    public SingleRedisCache(String cacheSpaceName, RedisClient redisClient, CacheSpace cacheSpace, Serializer serializer) {
         this.cacheSpaceName = cacheSpaceName;
         this.redisClient = redisClient;
         this.cacheSpace = cacheSpace;
+        this.serializer = serializer;
     }
 
     @Override
@@ -87,7 +90,7 @@ public class SingleRedisCache implements Cache, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        StatefulRedisConnection<Object, Object> connect = redisClient.connect(PbObjectRedisCodec.INSTANCE);
+        StatefulRedisConnection<Object, Object> connect = redisClient.connect(new PbObjectRedisCodec(serializer));
         syncCommand = connect.sync();
         asyncCommand = connect.async();
         cacheSpaceVersionKey = "v:" + cacheSpaceName;

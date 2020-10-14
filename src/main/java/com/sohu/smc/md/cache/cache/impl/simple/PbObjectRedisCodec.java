@@ -1,6 +1,6 @@
 package com.sohu.smc.md.cache.cache.impl.simple;
 
-import com.sohu.smc.md.cache.serializer.PbSerializer;
+import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.codec.RedisCodec;
 
 import java.nio.ByteBuffer;
@@ -12,19 +12,22 @@ import java.nio.ByteBuffer;
  */
 public class PbObjectRedisCodec implements RedisCodec<Object,Object> {
 
-    public static final PbObjectRedisCodec INSTANCE = new PbObjectRedisCodec();
     private static final byte[] EMPTY = new byte[0];
 
-    private PbSerializer pbSerializer = new PbSerializer();
+    private Serializer serializer;
+
+    public PbObjectRedisCodec(Serializer serializer) {
+        this.serializer = serializer;
+    }
 
     @Override
     public Object decodeKey(ByteBuffer byteBuffer) {
-        return pbSerializer.deserialize(getBytes(byteBuffer));
+        return serializer.deserialize(getBytes(byteBuffer));
     }
 
     @Override
     public Object decodeValue(ByteBuffer byteBuffer) {
-        return pbSerializer.deserialize(getBytes(byteBuffer));
+        return serializer.deserialize(getBytes(byteBuffer));
     }
 
     @Override
@@ -33,7 +36,7 @@ public class PbObjectRedisCodec implements RedisCodec<Object,Object> {
             return ByteBuffer.wrap(EMPTY);
         }
 
-        return ByteBuffer.wrap(pbSerializer.serialize(key));
+        return ByteBuffer.wrap(serializer.serialize(key));
     }
 
     @Override

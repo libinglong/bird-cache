@@ -46,6 +46,6 @@ public class MdRedisCacheManage extends SingleRedisCacheManage {
     @Override
     public Cache getCache(String cacheSpaceName) {
         return cacheMap.computeIfAbsent(cacheSpaceName, cacheSpaceName1 ->
-                applicationContext.getBean(MdRedisCache.class,cacheSpaceName1, redisClient, secondaryRedisClient, this));
+                applicationContext.getBean(MdRedisCache.class,cacheSpaceName1, redisClient, secondaryRedisClient, this, serializer));
     }
 }
