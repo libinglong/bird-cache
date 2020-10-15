@@ -8,10 +8,6 @@ import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.api.sync.RedisCommands;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,41 +20,40 @@ import java.util.stream.Collectors;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/10
  */
-@Component
-@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-public class SingleRedisCache implements Cache, InitializingBean {
+public class SingleRedisCache implements Cache {
 
     private CacheSpace cacheSpace;
     private String cacheSpaceName;
     private String cacheSpaceVersionKey;
-    private RedisClient redisClient;
-    RedisCommands<Object, Object> syncCommand;
-    RedisAsyncCommands<Object, Object> asyncCommand;
+
+    private RedisCommands<Object, Object> syncCommand;
+    private RedisAsyncCommands<Object, Object> asyncCommand;
     protected Serializer serializer;
 
     public SingleRedisCache(String cacheSpaceName, RedisClient redisClient, CacheSpace cacheSpace, Serializer serializer) {
         this.cacheSpaceName = cacheSpaceName;
-        this.redisClient = redisClient;
         this.cacheSpace = cacheSpace;
         this.serializer = serializer;
+
+        StatefulRedisConnection<Object, Object> connect = redisClient.connect(new PbObjectRedisCodec(serializer));
+        syncCommand = connect.sync();
+        asyncCommand = connect.async();
+        cacheSpaceVersionKey = "v:" + cacheSpaceName;
     }
 
     @Override
     public void expire(Object key, long milliseconds) {
-        Object keyWithSpace = processSpace(key);
-        doExpire(keyWithSpace, milliseconds);
+        syncCommand.pexpire(processSpace(key), milliseconds);
     }
 
     @Override
     public void delete(Object key) {
-        Object keyWithSpace = processSpace(key);
-        doDelete(keyWithSpace);
+        syncCommand.del(processSpace(key));
     }
 
     @Override
     public void set(Object key, Object val, long time) {
-        Object keyWithSpace = processSpace(key);
-        doSet(keyWithSpace,val,time);
+        syncCommand.psetex(processSpace(key), time, val);
     }
 
     @Override
@@ -66,54 +61,6 @@ public class SingleRedisCache implements Cache, InitializingBean {
         Map<Object, Object> kvsWithSpace = kvs.entrySet()
                 .stream()
                 .collect(Collectors.toMap(entry -> processSpace(entry.getKey()), Map.Entry::getValue));
-        doSet(kvsWithSpace, time);
-    }
-
-    @Override
-    public Object get(Object key) {
-        Object keyWithSpace = processSpace(key);
-        return doGet(keyWithSpace);
-    }
-
-    @Override
-    public List<Object> get(List<Object> keys) throws ExecutionException, InterruptedException {
-        List<Object> keysWithSpace = keys.stream()
-                .map(this::processSpace)
-                .collect(Collectors.toList());
-        return doGet(keysWithSpace);
-    }
-
-    @Override
-    public void clear() {
-        cacheSpace.incrVersion(cacheSpaceVersionKey);
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        StatefulRedisConnection<Object, Object> connect = redisClient.connect(new PbObjectRedisCodec(serializer));
-        syncCommand = connect.sync();
-        asyncCommand = connect.async();
-        cacheSpaceVersionKey = "v:" + cacheSpaceName;
-    }
-
-    protected Object processSpace(Object key) {
-        String version = cacheSpace.getVersion(cacheSpaceVersionKey);
-        return new SpaceWrapper(cacheSpaceName + version, key);
-    }
-
-    protected void doExpire(Object keyWithSpace, long milliseconds) {
-        syncCommand.pexpire(keyWithSpace, milliseconds);
-    }
-
-    protected void doDelete(Object keyWithSpace) {
-        syncCommand.del(keyWithSpace);
-    }
-
-    protected void doSet(Object keyWithSpace, Object val, long time) {
-        syncCommand.psetex(keyWithSpace, time, val);
-    }
-
-    protected void doSet(Map<Object, Object> kvsWithSpace, long time) throws ExecutionException, InterruptedException {
         List<RedisFuture<String>> futures = new ArrayList<>();
         kvsWithSpace.forEach((o1, o2) -> futures.add(asyncCommand.psetex(o1, time, o2)));
         for (RedisFuture<String> stringRedisFuture : futures) {
@@ -121,12 +68,16 @@ public class SingleRedisCache implements Cache, InitializingBean {
         }
     }
 
-    protected Object doGet(Object kvsWithSpace) {
-        return syncCommand.get(kvsWithSpace);
+    @Override
+    public Object get(Object key) {
+        return syncCommand.get(processSpace(key));
     }
 
-
-    protected List<Object> doGet(List<Object> keysWithSpace) throws ExecutionException, InterruptedException {
+    @Override
+    public List<Object> get(List<Object> keys) throws ExecutionException, InterruptedException {
+        List<Object> keysWithSpace = keys.stream()
+                .map(this::processSpace)
+                .collect(Collectors.toList());
         List<RedisFuture<Object>> futures = new ArrayList<>();
         keysWithSpace.forEach(o1 -> futures.add(asyncCommand.get(o1)));
         List<Object> result = new ArrayList<>();
@@ -134,6 +85,16 @@ public class SingleRedisCache implements Cache, InitializingBean {
             result.add(future.get());
         }
         return result;
+    }
+
+    @Override
+    public void clear() {
+        cacheSpace.incrVersion(cacheSpaceVersionKey);
+    }
+
+    protected Object processSpace(Object key) {
+        String version = cacheSpace.getVersion(cacheSpaceVersionKey);
+        return new SpaceWrapper(cacheSpaceName + ":" + version, key);
     }
 
 }

@@ -2,102 +2,61 @@ package com.sohu.smc.md.cache.cache.impl.multidc;
 
 import com.sohu.smc.md.cache.cache.impl.simple.SingleRedisCacheManage;
 import com.sohu.smc.md.cache.core.Cache;
-import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.sync.RedisCommands;
-import io.lettuce.core.codec.StringCodec;
 import io.lettuce.core.resource.ClientResources;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.core.task.AsyncTaskExecutor;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.util.Assert;
 
 import javax.annotation.PreDestroy;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/13
  */
-@Slf4j
-public class MdRedisCacheManage extends SingleRedisCacheManage implements ApplicationContextAware {
+public class MdRedisCacheManage extends SingleRedisCacheManage {
 
+    private SingleRedisCacheManage secondaryCacheManage;
     @Setter
-    private AsyncTaskExecutor mdCacheExecutor;
+    private ExecutorService executorService;
 
-    private RedisClient secondaryRedisClient;
+    private Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
 
-    private RedisURI secondaryRedisURI;
-    private ClientResources secondaryClientResources;
-    private RedisCommands<String, String> secondaryCommand;
-
-    public MdRedisCacheManage(RedisURI redisURI, RedisURI secondaryRedisURI) {
-        super(redisURI);
-        this.secondaryRedisURI = secondaryRedisURI;
+    public MdRedisCacheManage(RedisURI primaryRedisURI, RedisURI secondaryRedisURI) {
+        super(primaryRedisURI);
+        secondaryCacheManage = new SingleRedisCacheManage(secondaryRedisURI);
     }
 
-    public MdRedisCacheManage(RedisURI redisURI, ClientResources clientResources,
+    public MdRedisCacheManage(RedisURI primaryRedisURI, ClientResources primaryClientResources,
                               RedisURI secondaryRedisURI, ClientResources secondaryClientResources) {
-        super(redisURI,clientResources);
-        this.secondaryRedisURI = secondaryRedisURI;
-        this.secondaryClientResources = secondaryClientResources;
-    }
-
-    @Override
-    public void incrVersion(String cacheSpaceVersionKey) {
-        super.incrVersion(cacheSpaceVersionKey);
-        mdCacheExecutor.submit(() -> {
-            try{
-                secondaryCommand.incr(cacheSpaceVersionKey);
-                secondaryCommand.publish(CACHE_SPACE_CHANGE_CHANNEL, cacheSpaceVersionKey);
-            } catch (Exception e){
-                log.info("cacheSpaceVersionKey={}",cacheSpaceVersionKey);
-                log.debug("err",e);
-            }
-        });
-
-
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        super.afterPropertiesSet();
-        initExecutor();
-        secondaryRedisClient = initRedisClient(secondaryRedisURI,secondaryClientResources);
-        Assert.notNull(secondaryRedisClient,"secondaryRedisClient can not be null");
-        secondaryCommand = secondaryRedisClient.connect(StringCodec.UTF8)
-                .sync();
-    }
-
-
-    private void initExecutor(){
-        if (mdCacheExecutor == null){
-            ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-            executor.setCorePoolSize(5);
-            executor.setMaxPoolSize(20);
-            executor.setQueueCapacity(1024);
-            executor.afterPropertiesSet();
-            mdCacheExecutor = executor;
-        }
+        super(primaryRedisURI, primaryClientResources);
+        secondaryCacheManage = new SingleRedisCacheManage(secondaryRedisURI, secondaryClientResources);
     }
 
     @Override
     public Cache getCache(String cacheSpaceName) {
-        return cacheMap.computeIfAbsent(cacheSpaceName, cacheSpaceName1 ->
-                applicationContext.getBean(MdRedisCache.class,cacheSpaceName1, redisClient, secondaryRedisClient,
-                        this, serializer, mdCacheExecutor));
+        Cache primaryCache = super.getCache(cacheSpaceName);
+        Cache secondaryCache = secondaryCacheManage.getCache(cacheSpaceName);
+        return cacheMap.computeIfAbsent(cacheSpaceName, cacheSpaceName1 -> new MdRedisCache(primaryCache, secondaryCache,
+                serializer, executorService));
     }
 
     @Override
     @PreDestroy
     public void shutdown(){
-        if (redisClient != null){
-            redisClient.shutdown();
-        }
-        if (secondaryRedisClient != null){
-            secondaryRedisClient.shutdown();
+        super.shutdown();
+        secondaryCacheManage.shutdown();
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        super.afterPropertiesSet();
+        secondaryCacheManage.afterPropertiesSet();
+        if (executorService == null){
+            executorService = Executors.newCachedThreadPool();
         }
     }
 }

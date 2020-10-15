@@ -4,17 +4,14 @@ import com.sohu.smc.md.cache.core.*;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcut;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.task.AsyncTaskExecutor;
 
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Stream;
 
 /**
@@ -22,14 +19,15 @@ import java.util.stream.Stream;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/30
  */
-public class CacheOpInvocation extends StaticMethodMatcherPointcut implements MethodInterceptor,
-        ApplicationContextAware, InitializingBean {
+public class CacheOpInvocation extends StaticMethodMatcherPointcut implements MethodInterceptor{
 
     private CacheOpParseService cacheOpParseService;
+    private ExecutorService executorService;
 
-    private AsyncTaskExecutor mdInvExecutor;
-
-    private ApplicationContext applicationContext;
+    public CacheOpInvocation(CacheOpParseService cacheOpParseService, ExecutorService executorService){
+        this.cacheOpParseService = cacheOpParseService;
+        this.executorService = executorService;
+    }
 
     private Map<Method,MethodOpContext> contextMap = new ConcurrentHashMap<>(256);
 
@@ -43,7 +41,7 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
 
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
-        InvocationContext invocationContext = new InvocationContext(invocation, mdInvExecutor);
+        InvocationContext invocationContext = new InvocationContext(invocation, executorService);
         MethodOpContext methodOpContext = contextMap.get(invocation.getMethod());
         List<MdCacheEvictOp> evictOps = methodOpContext.getEvictOps();
         List<MdCachePutOp> putOps = methodOpContext.getPutOps();
@@ -86,14 +84,4 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
                 .orElse(Long.MAX_VALUE);
     }
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        cacheOpParseService = applicationContext.getBean(CacheOpParseService.class);
-        mdInvExecutor = (AsyncTaskExecutor) applicationContext.getBean("mdInvExecutor");
-    }
 }

@@ -1,20 +1,14 @@
 package com.sohu.smc.md.cache.cache.impl.multidc;
 
-import com.sohu.smc.md.cache.cache.impl.CacheSpace;
-import com.sohu.smc.md.cache.cache.impl.simple.PbObjectRedisCodec;
-import com.sohu.smc.md.cache.cache.impl.simple.SingleRedisCache;
+import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.serializer.Serializer;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.api.sync.RedisCommands;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.context.annotation.Scope;
-import org.springframework.core.task.AsyncTaskExecutor;
-import org.springframework.stereotype.Component;
 
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 
 /**
  * @author binglongli217932
@@ -22,85 +16,98 @@ import java.util.concurrent.ExecutionException;
  * @since 2020/10/13
  */
 @Slf4j
-@Component
-@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-public class MdRedisCache extends SingleRedisCache {
+public class MdRedisCache implements Cache {
 
-    private RedisClient secondaryRedisClient;
-    RedisCommands<Object, Object> secondaryCommand;
-    private AsyncTaskExecutor asyncTaskExecutor;
+    private Cache primaryCache;
+    private Cache secondaryCache;
+    private ExecutorService executorService;
+    private Serializer serializer;
 
-    public MdRedisCache(String cacheSpaceName, RedisClient redisClient, RedisClient secondaryRedisClient,
-                        CacheSpace cacheSpace, Serializer serializer, AsyncTaskExecutor asyncTaskExecutor) {
-        super(cacheSpaceName, redisClient, cacheSpace, serializer);
-        this.secondaryRedisClient = secondaryRedisClient;
-        this.asyncTaskExecutor = asyncTaskExecutor;
+    public MdRedisCache(Cache primaryCache, Cache secondaryCache, Serializer serializer,
+                        ExecutorService executorService) {
+        this.primaryCache = primaryCache;
+        this.secondaryCache = secondaryCache;
+        this.executorService = executorService;
+        this.serializer = serializer;
     }
 
     @Override
-    public void doExpire(Object keyWithSpace, long milliseconds) {
-        super.doExpire(keyWithSpace, milliseconds);
-        asyncTaskExecutor.submit(() -> {
+    public void expire(Object key, long milliseconds) {
+        primaryCache.expire(key, milliseconds);
+        executorService.submit(() -> {
             try{
-                secondaryCommand.expire(keyWithSpace,milliseconds);
+                secondaryCache.expire(key,milliseconds);
             }catch (Exception e){
-                log.info("expire error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
+                log.info("expire error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(key));
                 log.debug("err",e);
             }
         });
     }
 
     @Override
-    public void doDelete(Object keyWithSpace) {
-        super.doDelete(keyWithSpace);
-        asyncTaskExecutor.submit(() -> {
+    public void delete(Object key) {
+        primaryCache.delete(key);
+        executorService.submit(() -> {
             try{
-                secondaryCommand.del(keyWithSpace);
+                secondaryCache.delete(key);
             }catch (Exception e){
-                log.info("delete error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
+                log.info("delete error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(key));
                 log.debug("err",e);
             }
         });
     }
 
     @Override
-    public void doSet(Object keyWithSpace, Object val, long time) {
-        super.doSet(keyWithSpace, val, time);
-        asyncTaskExecutor.submit(() -> {
+    public void set(Object key, Object val, long milliseconds) {
+        primaryCache.set(key, val, milliseconds);
+        executorService.submit(() -> {
             try{
-                secondaryCommand.psetex(keyWithSpace, time, val);
+                secondaryCache.set(key, val, milliseconds);
             }catch (Exception e){
-                log.info("set error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(keyWithSpace));
+                log.info("set error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(key));
                 log.debug("err",e);
             }
         });
     }
 
     @Override
-    public void doSet(Map<Object, Object> kvsWithSpace, long time) throws ExecutionException, InterruptedException {
-        super.doSet(kvsWithSpace, time);
-        kvsWithSpace.forEach((o1, o2) ->
-                asyncTaskExecutor.submit(() -> {
-                    try {
-                        secondaryCommand.psetex(o1, time, o2);
-                    } catch (Exception e){
-                        log.info("set error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(o1));
-                        log.debug("err",e);
-                    }
-                }));
-
+    public void set(Map<Object, Object> kvs, long milliseconds) throws ExecutionException, InterruptedException {
+        primaryCache.set(kvs, milliseconds);
+        executorService.submit(() -> {
+            try {
+                secondaryCache.set(kvs, milliseconds);
+            } catch (Exception e){
+                log.info("set kvs error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(kvs));
+                log.debug("err",e);
+            }
+        });
     }
 
     @Override
-    public void afterPropertiesSet() throws Exception {
-        super.afterPropertiesSet();
-        secondaryCommand = secondaryRedisClient.connect(new PbObjectRedisCodec(serializer))
-                .sync();
+    public Object get(Object key) {
+        return primaryCache.get(key);
     }
 
-    private String encodeKey2Base64Strinn(Object keyWithSpace){
-        byte[] serialize = serializer.serialize(keyWithSpace);
+    @Override
+    public List<Object> get(List<Object> keys) throws ExecutionException, InterruptedException {
+        return primaryCache.get(keys);
+    }
+
+    @Override
+    public void clear() {
+        primaryCache.clear();
+        executorService.submit(() -> {
+            try {
+                secondaryCache.clear();
+            } catch (Exception e){
+                log.info("clear error in secondary redis");
+                log.debug("err",e);
+            }
+        });
+    }
+
+    private String encodeKey2Base64Strinn(Object key){
+        byte[] serialize = serializer.serialize(key);
         return Base64.getEncoder().encodeToString(serialize);
     }
-
 }

@@ -2,11 +2,18 @@ package com.sohu.smc.md.cache.spring;
 
 import com.sohu.smc.md.cache.anno.EnableMdCaching;
 import org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor;
-import org.springframework.context.annotation.*;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.ImportAware;
 import org.springframework.core.annotation.AnnotationAttributes;
-import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author binglongli217932
@@ -15,9 +22,16 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  */
 @ComponentScan(basePackages = "com.sohu.smc.md.cache")
 @Configuration
-public class ProxyCacheConfiguration implements ImportAware {
+public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
-    protected AnnotationAttributes enableMdCaching;
+    private AnnotationAttributes enableMdCaching;
+
+    @Autowired
+    private CacheOpParseService cacheOpParseService;
+
+    @Autowired(required = false)
+    @Qualifier("mdExecutorService")
+    private ExecutorService executorService;
 
     @Bean
     public DefaultBeanFactoryPointcutAdvisor cacheAdvisor(CacheOpInvocation cacheOpInvocation) {
@@ -31,7 +45,7 @@ public class ProxyCacheConfiguration implements ImportAware {
 
     @Bean
     public CacheOpInvocation cacheOpInvocation() {
-        return new CacheOpInvocation();
+        return new CacheOpInvocation(cacheOpParseService, executorService);
     }
 
     @Override
@@ -44,12 +58,11 @@ public class ProxyCacheConfiguration implements ImportAware {
         }
     }
 
-    @Bean
-    public AsyncTaskExecutor mdInvExecutor(){
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(20);
-        executor.setQueueCapacity(1024);
-        return executor;
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        if (executorService == null){
+            executorService = Executors.newCachedThreadPool();
+        }
     }
 }

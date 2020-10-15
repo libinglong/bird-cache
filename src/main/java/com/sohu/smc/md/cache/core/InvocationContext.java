@@ -4,10 +4,11 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
-import org.springframework.core.task.AsyncTaskExecutor;
 
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 此类用于缓存一些中间变量
@@ -21,7 +22,7 @@ import java.util.concurrent.*;
 @Slf4j
 public class InvocationContext {
 
-    private AsyncTaskExecutor mdInvExecutor;
+    private ExecutorService executorService;
 
     @Getter
     private final MethodInvocation methodInvocation;
@@ -34,9 +35,9 @@ public class InvocationContext {
     @Setter
     private Long execTime;
 
-    public InvocationContext(MethodInvocation methodInvocation, AsyncTaskExecutor mdInvExecutor){
+    public InvocationContext(MethodInvocation methodInvocation, ExecutorService executorService){
         this.methodInvocation = methodInvocation;
-        this.mdInvExecutor = mdInvExecutor;
+        this.executorService = executorService;
     }
 
     public OpContext getOpContext(AbstractKeyOp<?> abstractKeyOp) {
@@ -44,7 +45,7 @@ public class InvocationContext {
     }
 
     public Object doInvoke() throws Throwable {
-        return mdInvExecutor.submit(() -> {
+        return executorService.submit(() -> {
             try {
                 return methodInvocation.proceed();
             } catch (Throwable throwable) {
