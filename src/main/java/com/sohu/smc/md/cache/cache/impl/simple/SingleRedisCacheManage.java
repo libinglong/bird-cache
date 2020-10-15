@@ -24,10 +24,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SingleRedisCacheManage implements CacheManage, InitializingBean {
 
     private CacheSpace cacheSpace;
-    protected RedisClient redisClient;
+    private RedisClient redisClient;
+    private RedisURI redisURI;
+    private ClientResources clientResources;
+    private Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
+
     protected Serializer serializer;
-    protected RedisURI redisURI;
-    protected ClientResources clientResources;
 
     public SingleRedisCacheManage(RedisURI redisURI) {
         this.redisURI = redisURI;
@@ -48,7 +50,7 @@ public class SingleRedisCacheManage implements CacheManage, InitializingBean {
         cacheSpace = new SingleCacheSpace(redisClient);
     }
 
-    protected RedisClient initRedisClient(RedisURI redisURI,ClientResources clientResources){
+    private RedisClient initRedisClient(RedisURI redisURI,ClientResources clientResources){
         RedisClient redisClient;
         if (clientResources == null){
             redisClient = RedisClient.create(redisURI);
@@ -69,8 +71,6 @@ public class SingleRedisCacheManage implements CacheManage, InitializingBean {
             redisClient.shutdown();
         }
     }
-
-    private Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
 
     @Override
     public Cache getCache(String cacheSpaceName) {
