@@ -14,6 +14,9 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class CacheProperties {
 
+    /**
+     * 默认缓存两周
+     */
     private static Long DEFAULT_EXPIRE_TIME = 14 * 24 * 60 * 60 * 1000L;
 
     /**
