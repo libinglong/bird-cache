@@ -25,8 +25,8 @@ public class SingleCacheSpace implements CacheSpace {
         StatefulRedisPubSubConnection<String, String> pubSubConnection = redisClient.connectPubSub(StringCodec.UTF8);
         pubSubConnection.addListener(new RedisPubSubAdapter<String, String>() {
             @Override
-            public void message(String channel, String cacheSpaceName) {
-                versionMap.remove(cacheSpaceName);
+            public void message(String channel, String cacheSpaceVersionKey) {
+                versionMap.remove(cacheSpaceVersionKey);
             }
         });
         RedisPubSubCommands<String, String> sync = pubSubConnection.sync();
@@ -38,6 +38,8 @@ public class SingleCacheSpace implements CacheSpace {
     @Override
     public void incrVersion(String cacheSpaceVersionKey) {
         stringSyncCommand.incr(cacheSpaceVersionKey);
+        //保证当前jvm的实时性,立刻remove
+        versionMap.remove(cacheSpaceVersionKey);
         stringSyncCommand.publish(CACHE_SPACE_CHANGE_CHANNEL, cacheSpaceVersionKey);
     }
 
