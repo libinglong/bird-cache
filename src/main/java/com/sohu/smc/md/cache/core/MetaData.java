@@ -12,6 +12,5 @@ import java.lang.reflect.Method;
 @Data
 public class MetaData<A> {
     private Method method;
-    private Class<?> opCls;
     private A anno;
 }

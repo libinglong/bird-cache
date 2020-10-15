@@ -3,6 +3,11 @@ package com.sohu.smc.md.cache.spring;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author binglongli217932
@@ -35,5 +40,10 @@ public class CacheProperties {
      * 方法预期的执行时间以外的无法预料的时间 ms
      */
     private Long unexpectedTime = 100L;
+
+    /**
+     * 异步执行默认线程池
+     */
+    private ExecutorService executorService = Executors.newCachedThreadPool();
 
 }

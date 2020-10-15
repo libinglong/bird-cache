@@ -1,9 +1,9 @@
 package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
+import com.sohu.smc.md.cache.spring.CacheProperties;
 import com.sohu.smc.md.cache.spring.SpelParseService;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 
@@ -18,11 +18,8 @@ public abstract class AbstractKeyOp<A extends Annotation> extends AbstractOp<A> 
 
     protected Expression keyExpression;
 
-    @Autowired
-    protected SpelParseService spelParseService;
-
-    public AbstractKeyOp(MetaData<A> metaData, Cache cache) {
-        super(metaData, cache);
+    public AbstractKeyOp(MetaData<A> metaData, Cache cache, CacheProperties cacheProperties, SpelParseService spelParseService) {
+        super(metaData, cache, cacheProperties, spelParseService);
     }
 
     @Override

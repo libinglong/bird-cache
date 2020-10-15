@@ -11,7 +11,6 @@ import org.springframework.util.ConcurrentReferenceHashMap;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/30
  */
-@Service
 public class SpelParseService {
 
     private ConcurrentReferenceHashMap<String, Expression> expressionCache = new ConcurrentReferenceHashMap<>(256);

@@ -1,21 +1,19 @@
 package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.anno.MdCachePut;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
+import com.sohu.smc.md.cache.spring.CacheProperties;
+import com.sohu.smc.md.cache.spring.SpelParseService;
 
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/29
  */
-@Component
-@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class MdCachePutOp extends AbstractKeyOp<MdCachePut> {
 
-    public MdCachePutOp(MetaData<MdCachePut> metaData, Cache cache) {
-        super(metaData, cache);
+    public MdCachePutOp(MetaData<MdCachePut> metaData, Cache cache, CacheProperties cacheProperties,
+                          SpelParseService spelParseService) {
+        super(metaData, cache, cacheProperties, spelParseService);
     }
 
     public void delayInvalid(InvocationContext invocationContext) throws RuntimeException {

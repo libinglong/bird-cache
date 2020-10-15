@@ -1,6 +1,7 @@
 package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.spring.CacheProperties;
+import com.sohu.smc.md.cache.spring.SpelParseService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.annotation.Annotation;
@@ -12,14 +13,15 @@ import java.lang.annotation.Annotation;
  */
 public class AbstractOp<A extends Annotation> {
 
-    @Autowired
     protected CacheProperties cacheProperties;
-
+    protected SpelParseService spelParseService;
     protected MetaData<A> metaData;
     protected Cache cache;
 
-    public AbstractOp(MetaData<A> metaData, Cache cache) {
+    public AbstractOp(MetaData<A> metaData, Cache cache, CacheProperties cacheProperties, SpelParseService spelParseService) {
         this.metaData = metaData;
         this.cache = cache;
+        this.cacheProperties = cacheProperties;
+        this.spelParseService = spelParseService;
     }
 }

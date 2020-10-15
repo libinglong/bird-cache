@@ -2,14 +2,10 @@ package com.sohu.smc.md.cache.spring;
 
 import com.sohu.smc.md.cache.anno.*;
 import com.sohu.smc.md.cache.core.*;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.stereotype.Service;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,13 +15,17 @@ import java.util.stream.Collectors;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/29
  */
-@Service
-public class CacheOpParseService implements ApplicationContextAware {
+public class CacheOpParseService {
 
-    @Autowired
     private CacheManage cacheManage;
+    private CacheProperties cacheProperties;
+    private SpelParseService spelParseService;
 
-    private ApplicationContext ctx;
+    public CacheOpParseService(CacheManage cacheManage, CacheProperties cacheProperties, SpelParseService spelParseService) {
+        this.cacheManage = cacheManage;
+        this.cacheProperties = cacheProperties;
+        this.spelParseService = spelParseService;
+    }
 
     public MethodOpContext getContext(Method method){
         MethodOpContext methodOpContext = new MethodOpContext();
@@ -52,14 +52,18 @@ public class CacheOpParseService implements ApplicationContextAware {
         return getOpBean(method, opCls, anno);
     }
 
-    private <O> O getOpBean(Method method, Class<O> opCls, Annotation anno){
-        MetaData<Object> metaData = new MetaData<>();
-        metaData.setMethod(method);
-        metaData.setOpCls(opCls);
-        metaData.setAnno(anno);
-        String cacheSpaceName = method.getDeclaringClass()
-                .getName();
-        return ctx.getBean(opCls, metaData, cacheManage.getCache(cacheSpaceName));
+    private <O> O getOpBean(Method method, Class<O> opCls, Annotation anno) {
+        try {
+            MetaData<Object> metaData = new MetaData<>();
+            metaData.setMethod(method);
+            metaData.setAnno(anno);
+            String cacheSpaceName = method.getDeclaringClass()
+                    .getName();
+            Constructor<O> constructor = opCls.getConstructor(MetaData.class, Cache.class, CacheProperties.class, SpelParseService.class);
+            return constructor.newInstance(metaData, cacheManage.getCache(cacheSpaceName), cacheProperties, spelParseService);
+        } catch (Exception e){
+            throw new RuntimeException(e);
+        }
     }
 
     private Class<? extends Annotation> getAnnoByOp(Class<?> op){
@@ -81,11 +85,6 @@ public class CacheOpParseService implements ApplicationContextAware {
         else {
             throw new RuntimeException("code should never go here");
         }
-    }
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.ctx = applicationContext;
     }
 
 }

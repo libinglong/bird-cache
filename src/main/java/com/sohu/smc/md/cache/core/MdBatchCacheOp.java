@@ -2,12 +2,11 @@ package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.anno.MdBatchCache;
 import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
+import com.sohu.smc.md.cache.spring.CacheProperties;
+import com.sohu.smc.md.cache.spring.SpelParseService;
 import org.aopalliance.intercept.MethodInvocation;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.context.annotation.Scope;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,12 +19,11 @@ import java.util.stream.Collectors;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/29
  */
-@Component
-@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
 
-    public MdBatchCacheOp(MetaData<MdBatchCache> metaData, Cache cache) {
-        super(metaData, cache);
+    public MdBatchCacheOp(MetaData<MdBatchCache> metaData, Cache cache, CacheProperties cacheProperties,
+                          SpelParseService spelParseService) {
+        super(metaData, cache, cacheProperties, spelParseService);
     }
 
     private Expression listExpr;
