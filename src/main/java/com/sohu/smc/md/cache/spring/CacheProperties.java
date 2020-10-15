@@ -29,7 +29,7 @@ public class CacheProperties {
     private Long execTime = 200L;
 
     /**
-     * 无法预料的时间 ms
+     * 方法预期的执行时间以外的无法预料的时间 ms
      */
     private Long unexpectedTime = 100L;
 
