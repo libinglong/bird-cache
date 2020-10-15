@@ -3,7 +3,6 @@ package com.sohu.smc.md.cache.core;
 import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
 import com.sohu.smc.md.cache.spring.CacheProperties;
 import com.sohu.smc.md.cache.spring.SpelParseService;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 
@@ -14,16 +13,12 @@ import java.lang.annotation.Annotation;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/30
  */
-public abstract class AbstractKeyOp<A extends Annotation> extends AbstractOp<A> implements InitializingBean {
+public abstract class AbstractKeyOp<A extends Annotation> extends AbstractOp<A> {
 
     protected Expression keyExpression;
 
     public AbstractKeyOp(MetaData<A> metaData, Cache cache, CacheProperties cacheProperties, SpelParseService spelParseService) {
         super(metaData, cache, cacheProperties, spelParseService);
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
         this.keyExpression = spelParseService.getExpression(getKeyExpr());
     }
 
