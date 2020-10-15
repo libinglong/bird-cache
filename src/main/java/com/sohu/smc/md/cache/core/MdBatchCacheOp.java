@@ -24,6 +24,7 @@ public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
     public MdBatchCacheOp(MetaData<MdBatchCache> metaData, Cache cache, CacheProperties cacheProperties,
                           SpelParseService spelParseService) {
         super(metaData, cache, cacheProperties, spelParseService);
+        this.listExpr = spelParseService.getExpression("#p" + metaData.getAnno().index());
     }
 
     private Expression listExpr;
@@ -48,12 +49,6 @@ public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
     protected String getKeyExpr() {
         return metaData.getAnno()
                 .key();
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        super.afterPropertiesSet();
-        this.listExpr = spelParseService.getExpression("#p" + metaData.getAnno().index());
     }
 
     public List<ValueWrapper> getBatchCache(List<Object> keys) throws ExecutionException, InterruptedException {
