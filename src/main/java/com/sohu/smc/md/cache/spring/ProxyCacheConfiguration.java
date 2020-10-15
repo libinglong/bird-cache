@@ -6,7 +6,6 @@ import org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportAware;
 import org.springframework.core.annotation.AnnotationAttributes;
@@ -23,7 +22,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
     private AnnotationAttributes enableMdCaching;
 
     @Autowired(required = false)
-    private CacheProperties cacheProperties;
+    private CacheConfig cacheConfig;
 
     @Autowired
     private CacheManage cacheManage;
@@ -40,7 +39,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Bean
     public CacheOpInvocation cacheOpInvocation() {
-        return new CacheOpInvocation(cacheOpParseService(), cacheProperties.getExecutorService());
+        return new CacheOpInvocation(cacheOpParseService(), cacheConfig.getExecutorService());
     }
 
     @Bean
@@ -50,7 +49,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Bean
     public CacheOpParseService cacheOpParseService(){
-        return new CacheOpParseService(cacheManage, cacheProperties, spelParseService());
+        return new CacheOpParseService(cacheManage, cacheConfig, spelParseService());
     }
 
     @Override
@@ -66,8 +65,8 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if (cacheProperties == null){
-            cacheProperties = new CacheProperties();
+        if (cacheConfig == null){
+            cacheConfig = new CacheConfig();
         }
     }
 }

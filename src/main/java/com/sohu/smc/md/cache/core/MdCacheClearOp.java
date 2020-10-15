@@ -1,12 +1,8 @@
 package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.anno.MdCacheClear;
-import com.sohu.smc.md.cache.anno.MdCacheable;
-import com.sohu.smc.md.cache.spring.CacheProperties;
+import com.sohu.smc.md.cache.spring.CacheConfig;
 import com.sohu.smc.md.cache.spring.SpelParseService;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Component;
 
 /**
  * @author binglongli217932
@@ -15,9 +11,9 @@ import org.springframework.stereotype.Component;
  */
 public class MdCacheClearOp extends AbstractOp<MdCacheClear> {
 
-    public MdCacheClearOp(MetaData<MdCacheClear> metaData, Cache cache, CacheProperties cacheProperties,
+    public MdCacheClearOp(MetaData<MdCacheClear> metaData, Cache cache, CacheConfig cacheConfig,
                          SpelParseService spelParseService) {
-        super(metaData, cache, cacheProperties, spelParseService);
+        super(metaData, cache, cacheConfig, spelParseService);
     }
 
     public void clear(){

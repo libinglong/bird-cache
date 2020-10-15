@@ -1,7 +1,7 @@
 package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
-import com.sohu.smc.md.cache.spring.CacheProperties;
+import com.sohu.smc.md.cache.spring.CacheConfig;
 import com.sohu.smc.md.cache.spring.SpelParseService;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
@@ -17,8 +17,8 @@ public abstract class AbstractKeyOp<A extends Annotation> extends AbstractOp<A> 
 
     protected Expression keyExpression;
 
-    public AbstractKeyOp(MetaData<A> metaData, Cache cache, CacheProperties cacheProperties, SpelParseService spelParseService) {
-        super(metaData, cache, cacheProperties, spelParseService);
+    public AbstractKeyOp(MetaData<A> metaData, Cache cache, CacheConfig cacheConfig, SpelParseService spelParseService) {
+        super(metaData, cache, cacheConfig, spelParseService);
         this.keyExpression = spelParseService.getExpression(getKeyExpr());
     }
 
@@ -40,15 +40,15 @@ public abstract class AbstractKeyOp<A extends Annotation> extends AbstractOp<A> 
     }
 
     protected Long getDelayInvalidTime(){
-        return cacheProperties.getExecTime() + cacheProperties.getUnexpectedTime();
+        return cacheConfig.getExecTime() + cacheConfig.getUnexpectedTime();
     }
 
     public Long getExecTime(){
-        return cacheProperties.getExecTime();
+        return cacheConfig.getExecTime();
     }
 
     protected Long getExpiredTime(){
-        return cacheProperties.getExpireTime();
+        return cacheConfig.getExpireTime();
     }
 
     abstract protected String getKeyExpr();

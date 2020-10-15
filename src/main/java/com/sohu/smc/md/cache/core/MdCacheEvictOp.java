@@ -1,7 +1,7 @@
 package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.anno.MdCacheEvict;
-import com.sohu.smc.md.cache.spring.CacheProperties;
+import com.sohu.smc.md.cache.spring.CacheConfig;
 import com.sohu.smc.md.cache.spring.SpelParseService;
 
 /**
@@ -11,9 +11,9 @@ import com.sohu.smc.md.cache.spring.SpelParseService;
  */
 public class MdCacheEvictOp extends AbstractKeyOp<MdCacheEvict> {
 
-    public MdCacheEvictOp(MetaData<MdCacheEvict> metaData, Cache cache, CacheProperties cacheProperties,
+    public MdCacheEvictOp(MetaData<MdCacheEvict> metaData, Cache cache, CacheConfig cacheConfig,
                           SpelParseService spelParseService) {
-        super(metaData, cache, cacheProperties, spelParseService);
+        super(metaData, cache, cacheConfig, spelParseService);
     }
 
     public void delayInvalid(InvocationContext invocationContext) throws RuntimeException {

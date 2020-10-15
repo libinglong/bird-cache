@@ -2,7 +2,7 @@ package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.anno.MdBatchCache;
 import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
-import com.sohu.smc.md.cache.spring.CacheProperties;
+import com.sohu.smc.md.cache.spring.CacheConfig;
 import com.sohu.smc.md.cache.spring.SpelParseService;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.expression.EvaluationContext;
@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
  */
 public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
 
-    public MdBatchCacheOp(MetaData<MdBatchCache> metaData, Cache cache, CacheProperties cacheProperties,
+    public MdBatchCacheOp(MetaData<MdBatchCache> metaData, Cache cache, CacheConfig cacheConfig,
                           SpelParseService spelParseService) {
-        super(metaData, cache, cacheProperties, spelParseService);
+        super(metaData, cache, cacheConfig, spelParseService);
         this.listExpr = spelParseService.getExpression("#p" + metaData.getAnno().index());
     }
 

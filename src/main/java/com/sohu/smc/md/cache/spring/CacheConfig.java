@@ -3,8 +3,6 @@ package com.sohu.smc.md.cache.spring;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,7 +15,7 @@ import java.util.concurrent.Executors;
 @Getter
 @Setter
 @Accessors(chain = true)
-public class CacheProperties {
+public class CacheConfig {
 
     /**
      * 默认缓存两周
@@ -32,7 +30,7 @@ public class CacheProperties {
     /**
      * 当缓存发生变更前,会将对应的key过期,然后执行方法,之后再删除key.过期时间应该等于方法执行时间加非预期时间
      * 方法预期的执行时间 ms
-     * 参见{@link CacheProperties#unexpectedTime}
+     * 参见{@link CacheConfig#unexpectedTime}
      */
     private Long execTime = 200L;
 
