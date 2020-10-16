@@ -2,6 +2,7 @@ package com.sohu.smc.md.cache.cache.impl.multidc;
 
 import com.sohu.smc.md.cache.serializer.Serializer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.Assert;
 
 import java.util.Base64;
 
@@ -16,6 +17,7 @@ public class DefaultErrorHandler implements ErrorHandler {
     private Serializer serializer;
 
     public DefaultErrorHandler(Serializer serializer){
+        Assert.notNull(serializer, "the serializer can not be null");
         this.serializer = serializer;
     }
 

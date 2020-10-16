@@ -2,6 +2,7 @@ package com.sohu.smc.md.cache.cache.impl.multidc;
 
 import com.sohu.smc.md.cache.cache.impl.simple.SingleRedisCacheManager;
 import com.sohu.smc.md.cache.core.Cache;
+import com.sohu.smc.md.cache.serializer.PbSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.resource.ClientResources;
@@ -63,6 +64,9 @@ public class MdRedisCacheManager implements RedisCacheManager, InitializingBean 
 
     @Override
     public void afterPropertiesSet() {
+        if (serializer == null){
+            serializer = new PbSerializer();
+        }
         primaryCacheManager.setSerializer(serializer);
         secondaryCacheManager.setSerializer(serializer);
         primaryCacheManager.afterPropertiesSet();
