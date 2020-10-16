@@ -94,56 +94,59 @@
     }
     ```
 
-##### 使用注解实现方法级别的缓存
-    
-    ```java
-    @MdCacheable(key = "#p0")
-    public int get(int a){
-        //do some complete operations or io operations
-        return ret;
-    }
-    
-    @MdBatchCache(key = "#obj + #p0")
-    public List<Integer> gets(List<Integer> as,int a){
-        //do some complete operations or io operations
-        return ret;
-    }
-    
-    @MdCachePut(key = "#p0")
-    @MdCachePut(key = "#p0 + #p1")
-    public int put(int a, int b){
-        //do some complete operations or io operations
-        return ret;
-    }
-    
-    @MdCacheEvict(key = "#p0")
-    @MdCacheEvict(key = "#p0 + #p1")
-    public int evict(int a){
-        //do some complete operations or io operations
-        return ret;
-    }
-    
-    @MdCacheClear
-    public void clear(){
-    
-    }
-    ```
+##### 如何使用缓存
 
-##### 使用cacheManager做更高级的操作
+* 使用注解实现方法级别的缓存
 
-    ```java
-    @Autowired
-    private RedisCacheManager cacheManager;
-    
-    @RequestMapping("cache/evcit")
-    public String evict(@RequestParam("key") String base64Key) throws InterruptedException {
-      Cache cache = cacheManager.getCache("cacheName");
-      byte[] decode = Base64.getDecoder()
-        .decode(base64Key);
-      Object key = cacheManager.getSerializer()
-        .deserialize(decode);
-      cache.delete(key);
-      return "ok";
-    }
-    ```
+  ```java
+  @MdCacheable(key = "#p0")
+  public int get(int a){
+      //do some complete operations or io operations
+      return ret;
+  }
+  
+  @MdBatchCache(key = "#obj + #p0")
+  public List<Integer> gets(List<Integer> as,int a){
+      //do some complete operations or io operations
+      return ret;
+  }
+  
+  @MdCachePut(key = "#p0")
+  @MdCachePut(key = "#p0 + #p1")
+  public int put(int a, int b){
+      //do some complete operations or io operations
+      return ret;
+  }
+  
+  @MdCacheEvict(key = "#p0")
+  @MdCacheEvict(key = "#p0 + #p1")
+  public int evict(int a){
+      //do some complete operations or io operations
+      return ret;
+  }
+  
+  @MdCacheClear
+  public void clear(){
+  
+  }
+  ```
 
+  
+
+* 使用cacheManager做更高级的操作
+
+  ```java
+  @Autowired
+  private RedisCacheManager cacheManager;
+  
+  @RequestMapping("cache/evcit")
+  public String evict(@RequestParam("key") String base64Key) throws InterruptedException {
+    Cache cache = cacheManager.getCache("cacheName");
+    byte[] decode = Base64.getDecoder()
+      .decode(base64Key);
+    Object key = cacheManager.getSerializer()
+      .deserialize(decode);
+    cache.delete(key);
+    return "ok";
+  }
+  ```
