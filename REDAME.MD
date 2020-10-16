@@ -72,7 +72,7 @@
 
   * 序列化可自定义实现，默认是pb序列化
 
-        实现com.sohu.smc.md.cache.serializer.Serializer，并set到cacheManager中
+    实现com.sohu.smc.md.cache.serializer.Serializer，并set到cacheManager中
 
   * 配置类添加注解@EnableMdCaching
 
