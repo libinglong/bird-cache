@@ -22,6 +22,8 @@ public @interface MdBatchCache {
 
     /**
      * 用于生产cache key的spel表达式
+     * #p+index表示第index个参数,如#p0,#p1
+     * 特别的,#obj表示list中的一个元素
      * @return
      */
     String key();
