@@ -101,7 +101,7 @@ public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
         }
         Map<Object, Object> kvs = missingBatchEntries.stream()
                 .collect(Collectors.toMap(BatchEntry::getKeyObj, batchEntry -> batchEntry.getValueWrapper().get()));
-        cache.set(kvs, getExpiredTime());
+        cache.setKvs(kvs, getExpiredTime());
     }
 
 }

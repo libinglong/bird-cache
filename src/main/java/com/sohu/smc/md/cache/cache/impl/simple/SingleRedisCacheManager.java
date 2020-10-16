@@ -1,8 +1,8 @@
 package com.sohu.smc.md.cache.cache.impl.simple;
 
 import com.sohu.smc.md.cache.cache.impl.CacheSpace;
+import com.sohu.smc.md.cache.cache.impl.multidc.RedisCacheManager;
 import com.sohu.smc.md.cache.core.Cache;
-import com.sohu.smc.md.cache.core.CacheManage;
 import com.sohu.smc.md.cache.serializer.PbSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.ClientOptions;
@@ -21,21 +21,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/12
  */
-public class SingleRedisCacheManage implements CacheManage, InitializingBean {
+public class SingleRedisCacheManager implements RedisCacheManager, InitializingBean {
 
     private CacheSpace cacheSpace;
     private RedisClient redisClient;
     private RedisURI redisURI;
     private ClientResources clientResources;
     private Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
+    private Serializer serializer;
 
-    protected Serializer serializer;
-
-    public SingleRedisCacheManage(RedisURI redisURI) {
+    public SingleRedisCacheManager(RedisURI redisURI) {
         this.redisURI = redisURI;
     }
 
-    public SingleRedisCacheManage(RedisURI redisURI, ClientResources clientResources) {
+    public SingleRedisCacheManager(RedisURI redisURI, ClientResources clientResources) {
         this.redisURI = redisURI;
         this.clientResources = clientResources;
     }
@@ -65,6 +64,7 @@ public class SingleRedisCacheManage implements CacheManage, InitializingBean {
         return redisClient;
     }
 
+    @Override
     @PreDestroy
     public void shutdown(){
         if (redisClient != null){
@@ -78,6 +78,7 @@ public class SingleRedisCacheManage implements CacheManage, InitializingBean {
                 new SingleRedisCache(cacheSpaceName1, redisClient, cacheSpace, serializer));
     }
 
+    @Override
     public void setSerializer(Serializer serializer) {
         this.serializer = serializer;
     }

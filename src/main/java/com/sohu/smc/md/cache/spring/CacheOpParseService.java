@@ -17,12 +17,12 @@ import java.util.stream.Collectors;
  */
 public class CacheOpParseService {
 
-    private CacheManage cacheManage;
+    private CacheManager cacheManager;
     private CacheConfig cacheConfig;
     private SpelParseService spelParseService;
 
-    public CacheOpParseService(CacheManage cacheManage, CacheConfig cacheConfig, SpelParseService spelParseService) {
-        this.cacheManage = cacheManage;
+    public CacheOpParseService(CacheManager cacheManager, CacheConfig cacheConfig, SpelParseService spelParseService) {
+        this.cacheManager = cacheManager;
         this.cacheConfig = cacheConfig;
         this.spelParseService = spelParseService;
     }
@@ -60,7 +60,7 @@ public class CacheOpParseService {
             String cacheSpaceName = method.getDeclaringClass()
                     .getName();
             Constructor<O> constructor = opCls.getConstructor(MetaData.class, Cache.class, CacheConfig.class, SpelParseService.class);
-            return constructor.newInstance(metaData, cacheManage.getCache(cacheSpaceName), cacheConfig, spelParseService);
+            return constructor.newInstance(metaData, cacheManager.getCache(cacheSpaceName), cacheConfig, spelParseService);
         } catch (Exception e){
             throw new RuntimeException(e);
         }

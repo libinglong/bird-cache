@@ -1,10 +1,8 @@
 package com.sohu.smc.md.cache.cache.impl.multidc;
 
 import com.sohu.smc.md.cache.core.Cache;
-import com.sohu.smc.md.cache.serializer.Serializer;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -21,14 +19,18 @@ public class MdRedisCache implements Cache {
     private Cache primaryCache;
     private Cache secondaryCache;
     private ExecutorService executorService;
-    private Serializer serializer;
+    private ErrorHandler errorHandler;
 
-    public MdRedisCache(Cache primaryCache, Cache secondaryCache, Serializer serializer,
-                        ExecutorService executorService) {
+    public MdRedisCache(Cache primaryCache, Cache secondaryCache, ExecutorService executorService, ErrorHandler errorHandler) {
         this.primaryCache = primaryCache;
         this.secondaryCache = secondaryCache;
         this.executorService = executorService;
-        this.serializer = serializer;
+        this.errorHandler = errorHandler;
+    }
+
+    @Override
+    public String getCacheSpaceName() {
+        return primaryCache.getCacheSpaceName();
     }
 
     @Override
@@ -38,8 +40,12 @@ public class MdRedisCache implements Cache {
             try{
                 secondaryCache.expire(key,milliseconds);
             }catch (Exception e){
-                log.info("expire error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(key));
-                log.debug("err",e);
+                ErrorCache errorCache = new ErrorCache();
+                errorCache.cacheSpaceName = getCacheSpaceName();
+                errorCache.key = key;
+                errorCache.e = e;
+                errorCache.opName = "expire";
+                errorHandler.handle(errorCache);
             }
         });
     }
@@ -51,8 +57,12 @@ public class MdRedisCache implements Cache {
             try{
                 secondaryCache.delete(key);
             }catch (Exception e){
-                log.info("delete error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(key));
-                log.debug("err",e);
+                ErrorCache errorCache = new ErrorCache();
+                errorCache.cacheSpaceName = getCacheSpaceName();
+                errorCache.key = key;
+                errorCache.e = e;
+                errorCache.opName = "delete";
+                errorHandler.handle(errorCache);
             }
         });
     }
@@ -64,21 +74,29 @@ public class MdRedisCache implements Cache {
             try{
                 secondaryCache.set(key, val, milliseconds);
             }catch (Exception e){
-                log.info("set error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(key));
-                log.debug("err",e);
+                ErrorCache errorCache = new ErrorCache();
+                errorCache.cacheSpaceName = getCacheSpaceName();
+                errorCache.key = key;
+                errorCache.e = e;
+                errorCache.opName = "set";
+                errorHandler.handle(errorCache);
             }
         });
     }
 
     @Override
-    public void set(Map<Object, Object> kvs, long milliseconds) throws ExecutionException, InterruptedException {
-        primaryCache.set(kvs, milliseconds);
+    public void setKvs(Map<Object, Object> kvs, long milliseconds) throws ExecutionException, InterruptedException {
+        primaryCache.setKvs(kvs, milliseconds);
         executorService.submit(() -> {
             try {
-                secondaryCache.set(kvs, milliseconds);
+                secondaryCache.setKvs(kvs, milliseconds);
             } catch (Exception e){
-                log.info("set kvs error in secondary redis,the base64 of the key bytes is {}",encodeKey2Base64Strinn(kvs));
-                log.debug("err",e);
+                ErrorCache errorCache = new ErrorCache();
+                errorCache.cacheSpaceName = getCacheSpaceName();
+                errorCache.key = kvs;
+                errorCache.e = e;
+                errorCache.opName = "setKvs";
+                errorHandler.handle(errorCache);
             }
         });
     }
@@ -100,14 +118,14 @@ public class MdRedisCache implements Cache {
             try {
                 secondaryCache.clear();
             } catch (Exception e){
-                log.info("clear error in secondary redis");
-                log.debug("err",e);
+                ErrorCache errorCache = new ErrorCache();
+                errorCache.cacheSpaceName = getCacheSpaceName();
+                errorCache.e = e;
+                errorCache.opName = "clear";
+                errorHandler.handle(errorCache);
             }
         });
     }
 
-    private String encodeKey2Base64Strinn(Object key){
-        byte[] serialize = serializer.serialize(key);
-        return Base64.getEncoder().encodeToString(serialize);
-    }
+
 }

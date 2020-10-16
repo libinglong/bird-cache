@@ -12,6 +12,12 @@ import java.util.concurrent.ExecutionException;
 public interface Cache {
 
     /**
+     * 获取当前缓存命名空间的名字
+     * @return 当前缓存命名空间的名字
+     */
+    String getCacheSpaceName();
+
+    /**
      * 设置key的过期时间
      * key在time指定的时间后过期
      * @param key the key of this cache
@@ -35,11 +41,12 @@ public interface Cache {
 
     /**
      * 添加缓存
-     * @param kvs
+     * @param kvs kvs
      * @param milliseconds time time to expire in ms
-     * @throws Exception e
+     * @throws ExecutionException e
+     * @throws InterruptedException e
      */
-    void set(Map<Object,Object> kvs, long milliseconds) throws ExecutionException, InterruptedException;
+    void setKvs(Map<Object,Object> kvs, long milliseconds) throws ExecutionException, InterruptedException;
 
     /**
      * 缓存查询
@@ -53,6 +60,8 @@ public interface Cache {
      * 参数和返回值顺序必须是对应的
      * @param keys the keys of this cache
      * @return the list mapping to keys in order
+     * @throws ExecutionException e
+     * @throws InterruptedException e
      */
     List<Object> get(List<Object> keys) throws ExecutionException, InterruptedException;
 

@@ -1,7 +1,7 @@
 package com.sohu.smc.md.cache.spring;
 
 import com.sohu.smc.md.cache.anno.EnableMdCaching;
-import com.sohu.smc.md.cache.core.CacheManage;
+import com.sohu.smc.md.cache.core.CacheManager;
 import org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +25,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
     private CacheConfig cacheConfig;
 
     @Autowired
-    private CacheManage cacheManage;
+    private CacheManager cacheManager;
 
     @Bean
     public DefaultBeanFactoryPointcutAdvisor cacheAdvisor(CacheOpInvocation cacheOpInvocation) {
@@ -49,7 +49,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Bean
     public CacheOpParseService cacheOpParseService(){
-        return new CacheOpParseService(cacheManage, cacheConfig, spelParseService());
+        return new CacheOpParseService(cacheManager, cacheConfig, spelParseService());
     }
 
     @Override

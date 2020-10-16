@@ -42,6 +42,11 @@ public class SingleRedisCache implements Cache {
     }
 
     @Override
+    public String getCacheSpaceName() {
+        return cacheSpaceName;
+    }
+
+    @Override
     public void expire(Object key, long milliseconds) {
         syncCommand.pexpire(processSpace(key), milliseconds);
     }
@@ -57,7 +62,7 @@ public class SingleRedisCache implements Cache {
     }
 
     @Override
-    public void set(Map<Object, Object> kvs, long time) throws ExecutionException, InterruptedException {
+    public void setKvs(Map<Object, Object> kvs, long time) throws ExecutionException, InterruptedException {
         Map<Object, Object> kvsWithSpace = kvs.entrySet()
                 .stream()
                 .collect(Collectors.toMap(entry -> processSpace(entry.getKey()), Map.Entry::getValue));
