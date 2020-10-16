@@ -28,50 +28,79 @@
 
 ##### 使用方式
 
-* 单个redis服务使用SingleRedisCacheManager
+* 如何启动
 
-  ```java
-  @Bean
-  public SingleRedisCacheManager simpleRedisCacheManager(){
-    RedisURI redisURI = RedisURI.builder()
-      .withHost("localhost")
-      .withPort(6379)
-      .build();
-  	return new SingleRedisCacheManager(redisURI);
-  }
-  ```
+  * 添加依赖
 
-* 异地两个redis服务使用MdRedisCacheManager
+    ```java
+    <dependency>
+      <groupId>com.sohu.smc</groupId>
+      <artifactId>md-cache</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
+    ```
 
-  ```java
-  @Bean
-  public MdRedisCacheManager cacheManager(){
-    RedisURI redisURI = RedisURI.builder()
-      .withHost("localhost")
-      .withPort(6379)
-      .build();
-    RedisURI redisURI2 = RedisURI.builder()
-      .withHost("localhost")
-      .withPort(6380)
-      .build();
-    return new MdRedisCacheManager(redisURI, redisURI2);
-  }
-  ```
+  * 单个redis服务使用SingleRedisCacheManager
 
-* 序列化可自定义实现
+    ```java
+    @Bean
+    public SingleRedisCacheManager simpleRedisCacheManager(){
+      RedisURI redisURI = RedisURI.builder()
+        .withHost("localhost")
+        .withPort(6379)
+        .build();
+    	return new SingleRedisCacheManager(redisURI);
+    }
+    ```
 
-  实现com.sohu.smc.md.cache.serializer.Serializer
+  * 异地两个redis服务使用MdRedisCacheManager
 
-* 配置类添加注解@EnableMdCaching
+    ```java
+    @Bean
+    public MdRedisCacheManager cacheManager(){
+      RedisURI redisURI = RedisURI.builder()
+        .withHost("localhost")
+        .withPort(6379)
+        .build();
+      RedisURI redisURI2 = RedisURI.builder()
+        .withHost("localhost")
+        .withPort(6380)
+        .build();
+      return new MdRedisCacheManager(redisURI, redisURI2);
+    }
+    ```
 
-  ```java
-  @EnableMdCaching
-  @Configuration
-  public class Config {
-  }
-  ```
+  * 序列化可自定义实现，默认是pb序列化
 
-##### 通用配置
+    实现com.sohu.smc.md.cache.serializer.Serializer，并set到cacheManager中
 
-* 参见com.sohu.smc.md.cache.spring.CacheConfig
+  * 配置类添加注解@EnableMdCaching
+
+    ```java
+    @EnableMdCaching
+    @Configuration
+    public class Config {
+    }
+    ```
+
+  * 自定义配置
+
+    ```java
+    @Bean
+    public CacheConfig cacheConfig(){
+        CacheConfig cacheConfig = new CacheConfig();
+        cacheConfig.setExecTime(200L);
+        return cacheConfig;
+    }
+    ```
+
+##### 使用注解实现方法级别的缓存
+
+
+
+##### 使用cacheManager做更高级的操作
+
+
+
+
 
