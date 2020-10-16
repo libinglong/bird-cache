@@ -41,7 +41,7 @@
   }
   ```
 
-* 序列化可选
+* 序列化配置
 
   实现com.sohu.smc.md.cache.serializer.Serializer
 
