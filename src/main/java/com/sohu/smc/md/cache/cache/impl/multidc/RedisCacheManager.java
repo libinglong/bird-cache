@@ -11,10 +11,10 @@ import com.sohu.smc.md.cache.serializer.Serializer;
 public interface RedisCacheManager extends CacheManager {
 
     /**
-     * 设置序列化方式
-     * @param serializer serializer
+     * 序列化方式
+     * @return serializer
      */
-    void setSerializer(Serializer serializer);
+    Serializer getSerializer();
 
     /**
      * 释放必要的资源

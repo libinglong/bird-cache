@@ -9,6 +9,8 @@ import io.lettuce.core.ClientOptions;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.resource.ClientResources;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
@@ -28,6 +30,8 @@ public class SingleRedisCacheManager implements RedisCacheManager, InitializingB
     private RedisURI redisURI;
     private ClientResources clientResources;
     private Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
+    @Setter
+    @Getter
     private Serializer serializer;
 
     public SingleRedisCacheManager(RedisURI redisURI) {
@@ -40,7 +44,7 @@ public class SingleRedisCacheManager implements RedisCacheManager, InitializingB
     }
 
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         Assert.notNull(redisURI,"redisURI can not be null");
         redisClient = initRedisClient(redisURI, clientResources);
         if (serializer == null){
@@ -78,8 +82,4 @@ public class SingleRedisCacheManager implements RedisCacheManager, InitializingB
                 new SingleRedisCache(cacheSpaceName1, redisClient, cacheSpace, serializer));
     }
 
-    @Override
-    public void setSerializer(Serializer serializer) {
-        this.serializer = serializer;
-    }
 }

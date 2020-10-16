@@ -5,6 +5,7 @@ import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.resource.ClientResources;
+import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.InitializingBean;
 
@@ -27,6 +28,7 @@ public class MdRedisCacheManager implements RedisCacheManager, InitializingBean 
     private ExecutorService executorService;
     @Setter
     private ErrorHandler errorHandler;
+    @Getter
     @Setter
     private Serializer serializer;
 
@@ -60,7 +62,7 @@ public class MdRedisCacheManager implements RedisCacheManager, InitializingBean 
     }
 
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         primaryCacheManager.setSerializer(serializer);
         secondaryCacheManager.setSerializer(serializer);
         primaryCacheManager.afterPropertiesSet();
