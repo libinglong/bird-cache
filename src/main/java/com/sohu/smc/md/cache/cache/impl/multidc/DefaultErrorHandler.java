@@ -2,6 +2,7 @@ package com.sohu.smc.md.cache.cache.impl.multidc;
 
 import com.sohu.smc.md.cache.cache.impl.simple.ObjectRedisCodec;
 import com.sohu.smc.md.cache.cache.impl.simple.SingleRedisCacheManager;
+import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import com.sohu.smc.md.cache.util.RedisClientUtils;
 import io.lettuce.core.RedisURI;
@@ -10,6 +11,7 @@ import io.lettuce.core.resource.ClientResources;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -62,8 +64,15 @@ class DefaultErrorHandler implements ErrorHandler {
                         if (errorCache == null){
                             break;
                         }
-                        secondaryRedisManager.getCache(errorCache.cacheSpaceName)
-                                .delete(errorCache.key);
+                        Cache cache = secondaryRedisManager.getCache(errorCache.cacheSpaceName);
+                        if(ErrorOp.SET_KVS.equals(errorCache.errorOp)){
+                            Map<?, ?> kvs = (Map<?, ?>) errorCache.key;
+                            kvs.forEach((o, o2) -> cache.delete(o));
+                        } else if (ErrorOp.CLEAR.equals(errorCache.errorOp)){
+                            cache.clear();
+                        } else {
+                            cache.delete(errorCache.key);
+                        }
                         primaryCommand.srem(ERROR_CACHE_EVENT_SET, errorCache);
                     }
                 }

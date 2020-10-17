@@ -3,14 +3,15 @@ package com.sohu.smc.md.cache.cache.impl.multidc;
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
- * @since 2020/10/16
+ * @since 2020/10/17
  */
-class ErrorCache {
+public enum ErrorOp {
 
-    String cacheSpaceName;
-    ErrorOp errorOp;
-    Object key;
-    Object value;
-    Throwable e;
+    EXPIRE,
+    DELETE,
+    SET,
+    SET_KVS,
+    CLEAR,
+    ;
 
 }

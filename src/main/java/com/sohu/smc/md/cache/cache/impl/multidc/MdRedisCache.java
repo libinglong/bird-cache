@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
+import static com.sohu.smc.md.cache.cache.impl.multidc.ErrorOp.*;
+
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
@@ -44,7 +46,7 @@ public class MdRedisCache implements Cache {
                 errorCache.cacheSpaceName = getCacheSpaceName();
                 errorCache.key = key;
                 errorCache.e = e;
-                errorCache.opName = "expire";
+                errorCache.errorOp = EXPIRE;
                 errorHandler.handle(errorCache);
             }
         });
@@ -61,7 +63,7 @@ public class MdRedisCache implements Cache {
                 errorCache.cacheSpaceName = getCacheSpaceName();
                 errorCache.key = key;
                 errorCache.e = e;
-                errorCache.opName = "delete";
+                errorCache.errorOp = DELETE;
                 errorHandler.handle(errorCache);
             }
         });
@@ -79,7 +81,7 @@ public class MdRedisCache implements Cache {
                 errorCache.key = key;
                 errorCache.value = val;
                 errorCache.e = e;
-                errorCache.opName = "set";
+                errorCache.errorOp = SET;
                 errorHandler.handle(errorCache);
             }
         });
@@ -96,7 +98,7 @@ public class MdRedisCache implements Cache {
                 errorCache.cacheSpaceName = getCacheSpaceName();
                 errorCache.key = kvs;
                 errorCache.e = e;
-                errorCache.opName = "setKvs";
+                errorCache.errorOp = SET_KVS;
                 errorHandler.handle(errorCache);
             }
         });
@@ -122,7 +124,7 @@ public class MdRedisCache implements Cache {
                 ErrorCache errorCache = new ErrorCache();
                 errorCache.cacheSpaceName = getCacheSpaceName();
                 errorCache.e = e;
-                errorCache.opName = "clear";
+                errorCache.errorOp = CLEAR;
                 errorHandler.handle(errorCache);
             }
         });
