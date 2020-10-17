@@ -77,6 +77,7 @@ public class MdRedisCache implements Cache {
                 ErrorCache errorCache = new ErrorCache();
                 errorCache.cacheSpaceName = getCacheSpaceName();
                 errorCache.key = key;
+                errorCache.value = val;
                 errorCache.e = e;
                 errorCache.opName = "set";
                 errorHandler.handle(errorCache);

@@ -10,6 +10,7 @@ class ErrorCache {
     String cacheSpaceName;
     String opName;
     Object key;
+    Object value;
     Throwable e;
 
 }

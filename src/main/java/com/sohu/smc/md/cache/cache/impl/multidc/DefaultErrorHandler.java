@@ -55,16 +55,21 @@ class DefaultErrorHandler implements ErrorHandler {
 
         @Override
         public void run() {
-            if ("PONG".equals(secondCommand.ping())){
-                while (true){
-                    ErrorCache errorCache = (ErrorCache) primaryCommand.lpop(ERROR_CACHE_EVENT_LIST);
-                    if (errorCache == null){
-                        break;
+            try {
+                if ("PONG".equals(secondCommand.ping())){
+                    while (true){
+                        ErrorCache errorCache = (ErrorCache) primaryCommand.lpop(ERROR_CACHE_EVENT_LIST);
+                        if (errorCache == null){
+                            break;
+                        }
+                        secondaryRedisManager.getCache(errorCache.cacheSpaceName)
+                                .delete(errorCache.key);
                     }
-                    secondaryRedisManager.getCache(errorCache.cacheSpaceName)
-                            .delete(errorCache.key);
                 }
+            } catch (Exception e){
+                //ignore
             }
+
         }
     }
 
