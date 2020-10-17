@@ -24,7 +24,7 @@ class DefaultErrorHandler implements ErrorHandler {
     private RedisCommands<Object, Object> primaryCommand;
     private RedisCommands<Object, Object> secondCommand;
     private SingleRedisCacheManager secondaryRedisManager;
-    private static String ERROR_CACHE_EVENT_LIST = "ERROR_CACHE_EVENT_LIST";
+    private static String ERROR_CACHE_EVENT_SET = "ERROR_CACHE_EVENT_SET";
 
     public DefaultErrorHandler(RedisURI primaryRedisURI, ClientResources primaryClientResources,
                                RedisURI secondaryRedisURI, ClientResources secondaryClientResources, Serializer serializer) {
@@ -48,7 +48,7 @@ class DefaultErrorHandler implements ErrorHandler {
 
     @Override
     public void handle(ErrorCache errorCache) {
-        primaryCommand.rpush(ERROR_CACHE_EVENT_LIST, errorCache);
+        primaryCommand.sadd(ERROR_CACHE_EVENT_SET, errorCache);
     }
 
     private class ErrorRunnable implements Runnable {
@@ -58,12 +58,13 @@ class DefaultErrorHandler implements ErrorHandler {
             try {
                 if ("PONG".equals(secondCommand.ping())){
                     while (true){
-                        ErrorCache errorCache = (ErrorCache) primaryCommand.lpop(ERROR_CACHE_EVENT_LIST);
+                        ErrorCache errorCache = (ErrorCache) primaryCommand.srandmember(ERROR_CACHE_EVENT_SET);
                         if (errorCache == null){
                             break;
                         }
                         secondaryRedisManager.getCache(errorCache.cacheSpaceName)
                                 .delete(errorCache.key);
+                        primaryCommand.srem(ERROR_CACHE_EVENT_SET, errorCache);
                     }
                 }
             } catch (Exception e){
