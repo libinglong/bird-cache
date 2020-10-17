@@ -1,10 +1,17 @@
 package com.sohu.smc.md.cache.cache.impl.multidc;
 
+import com.sohu.smc.md.cache.cache.impl.simple.ObjectRedisCodec;
+import com.sohu.smc.md.cache.cache.impl.simple.SingleRedisCacheManager;
 import com.sohu.smc.md.cache.serializer.Serializer;
+import com.sohu.smc.md.cache.util.RedisClientUtils;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.api.sync.RedisCommands;
+import io.lettuce.core.resource.ClientResources;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 
-import java.util.Base64;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author binglongli217932
@@ -12,25 +19,53 @@ import java.util.Base64;
  * @since 2020/10/16
  */
 @Slf4j
-public class DefaultErrorHandler implements ErrorHandler {
+class DefaultErrorHandler implements ErrorHandler {
 
-    private Serializer serializer;
+    private RedisCommands<Object, Object> primaryCommand;
+    private RedisCommands<Object, Object> secondCommand;
+    private SingleRedisCacheManager secondaryRedisManager;
+    private static String ERROR_CACHE_EVENT_LIST = "ERROR_CACHE_EVENT_LIST";
 
-    public DefaultErrorHandler(Serializer serializer){
+    public DefaultErrorHandler(RedisURI primaryRedisURI, ClientResources primaryClientResources,
+                               RedisURI secondaryRedisURI, ClientResources secondaryClientResources, Serializer serializer) {
+        Assert.notNull(primaryRedisURI, "the primaryRedisURI can not be null");
+        Assert.notNull(primaryClientResources, "the primaryClientResources can not be null");
+        Assert.notNull(secondaryRedisURI, "the secondaryRedisURI can not be null");
+        Assert.notNull(secondaryClientResources, "the secondaryClientResources can not be null");
         Assert.notNull(serializer, "the serializer can not be null");
-        this.serializer = serializer;
+        primaryCommand = RedisClientUtils.initRedisClient(primaryRedisURI, primaryClientResources)
+                .connect(new ObjectRedisCodec(serializer))
+                .sync();
+        secondCommand = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources)
+                .connect(new ObjectRedisCodec(serializer))
+                .sync();
+        secondaryRedisManager = new SingleRedisCacheManager(secondaryRedisURI, secondaryClientResources);
+        secondaryRedisManager.setSerializer(serializer);
+        secondaryRedisManager.afterPropertiesSet();
+        Executors.newScheduledThreadPool(1)
+                .scheduleWithFixedDelay(new ErrorRunnable(),0,3, TimeUnit.SECONDS);
     }
 
     @Override
     public void handle(ErrorCache errorCache) {
-        log.info("cacheSpaceName={},opName={},the base64 of the key bytes={},e={}",errorCache.cacheSpaceName,
-                errorCache.opName, encodeKey2Base64String(errorCache.key), errorCache.e.getMessage());
-        log.debug("err occur",errorCache.e);
+        primaryCommand.rpush(ERROR_CACHE_EVENT_LIST, errorCache);
     }
 
-    private String encodeKey2Base64String(Object key){
-        byte[] serialize = serializer.serialize(key);
-        return Base64.getEncoder().encodeToString(serialize);
+    private class ErrorRunnable implements Runnable {
+
+        @Override
+        public void run() {
+            if ("PONG".equals(secondCommand.ping())){
+                while (true){
+                    ErrorCache errorCache = (ErrorCache) primaryCommand.lpop(ERROR_CACHE_EVENT_LIST);
+                    if (errorCache == null){
+                        break;
+                    }
+                    secondaryRedisManager.getCache(errorCache.cacheSpaceName)
+                            .delete(errorCache.key);
+                }
+            }
+        }
     }
 
 

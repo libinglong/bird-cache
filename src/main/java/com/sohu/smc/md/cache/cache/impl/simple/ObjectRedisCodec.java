@@ -10,13 +10,13 @@ import java.nio.ByteBuffer;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/13
  */
-public class PbObjectRedisCodec implements RedisCodec<Object,Object> {
+public class ObjectRedisCodec implements RedisCodec<Object,Object> {
 
     private static final byte[] EMPTY = new byte[0];
 
     private Serializer serializer;
 
-    public PbObjectRedisCodec(Serializer serializer) {
+    public ObjectRedisCodec(Serializer serializer) {
         this.serializer = serializer;
     }
 

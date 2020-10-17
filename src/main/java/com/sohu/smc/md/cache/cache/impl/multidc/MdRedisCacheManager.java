@@ -6,9 +6,11 @@ import com.sohu.smc.md.cache.serializer.PbSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.resource.ClientResources;
+import io.lettuce.core.resource.DefaultClientResources;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.Assert;
 
 import javax.annotation.PreDestroy;
 import java.util.Map;
@@ -34,16 +36,27 @@ public class MdRedisCacheManager implements RedisCacheManager, InitializingBean 
     private Serializer serializer;
 
     private Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
+    private RedisURI primaryRedisURI;
+    private RedisURI secondaryRedisURI;
+    private ClientResources primaryClientResources;
+    private ClientResources secondaryClientResources;
 
     public MdRedisCacheManager(RedisURI primaryRedisURI, RedisURI secondaryRedisURI) {
-        primaryCacheManager = new SingleRedisCacheManager(primaryRedisURI);
-        secondaryCacheManager = new SingleRedisCacheManager(secondaryRedisURI);
+        this(primaryRedisURI, DefaultClientResources.create(), secondaryRedisURI, DefaultClientResources.create());
     }
 
     public MdRedisCacheManager(RedisURI primaryRedisURI, ClientResources primaryClientResources,
                                RedisURI secondaryRedisURI, ClientResources secondaryClientResources) {
-        primaryCacheManager = new SingleRedisCacheManager(primaryRedisURI, primaryClientResources);
-        secondaryCacheManager = new SingleRedisCacheManager(secondaryRedisURI, secondaryClientResources);
+        Assert.notNull(primaryRedisURI,"primaryRedisURI can not be null");
+        Assert.notNull(secondaryRedisURI,"secondaryRedisURI can not be null");
+        Assert.notNull(primaryClientResources,"primaryClientResources can not be null");
+        Assert.notNull(secondaryClientResources,"secondaryClientResources can not be null");
+        this.primaryRedisURI = primaryRedisURI;
+        this.secondaryRedisURI = secondaryRedisURI;
+        this.primaryClientResources = primaryClientResources;
+        this.secondaryClientResources = secondaryClientResources;
+        this.primaryCacheManager = new SingleRedisCacheManager(primaryRedisURI, primaryClientResources);
+        this.secondaryCacheManager = new SingleRedisCacheManager(secondaryRedisURI, secondaryClientResources);
     }
 
     @Override
@@ -75,7 +88,8 @@ public class MdRedisCacheManager implements RedisCacheManager, InitializingBean 
             executorService = Executors.newCachedThreadPool();
         }
         if (errorHandler == null){
-            errorHandler = new DefaultErrorHandler(serializer);
+            errorHandler = new DefaultErrorHandler(primaryRedisURI, primaryClientResources,
+                    secondaryRedisURI, secondaryClientResources, serializer);
         }
     }
 }

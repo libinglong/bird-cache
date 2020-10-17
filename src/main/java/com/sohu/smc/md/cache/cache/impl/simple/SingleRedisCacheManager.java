@@ -5,10 +5,11 @@ import com.sohu.smc.md.cache.cache.impl.multidc.RedisCacheManager;
 import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.serializer.PbSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
-import io.lettuce.core.ClientOptions;
+import com.sohu.smc.md.cache.util.RedisClientUtils;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.resource.ClientResources;
+import io.lettuce.core.resource.DefaultClientResources;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.InitializingBean;
@@ -35,37 +36,23 @@ public class SingleRedisCacheManager implements RedisCacheManager, InitializingB
     private Serializer serializer;
 
     public SingleRedisCacheManager(RedisURI redisURI) {
-        this.redisURI = redisURI;
+        this(redisURI, DefaultClientResources.create());
     }
 
     public SingleRedisCacheManager(RedisURI redisURI, ClientResources clientResources) {
+        Assert.notNull(redisURI,"redisURI can not be null");
+        Assert.notNull(clientResources,"clientResources can not be null");
         this.redisURI = redisURI;
         this.clientResources = clientResources;
     }
 
     @Override
     public void afterPropertiesSet() {
-        Assert.notNull(redisURI,"redisURI can not be null");
-        redisClient = initRedisClient(redisURI, clientResources);
+        redisClient = RedisClientUtils.initRedisClient(redisURI, clientResources);
         if (serializer == null){
             serializer = new PbSerializer();
         }
         cacheSpace = new SingleCacheSpace(redisClient);
-    }
-
-    private RedisClient initRedisClient(RedisURI redisURI,ClientResources clientResources){
-        RedisClient redisClient;
-        if (clientResources == null){
-            redisClient = RedisClient.create(redisURI);
-        } else {
-            redisClient = RedisClient.create(clientResources, redisURI);
-        }
-        ClientOptions options = ClientOptions.builder()
-                .autoReconnect(true)
-                .disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS)
-                .build();
-        redisClient.setOptions(options);
-        return redisClient;
     }
 
     @Override

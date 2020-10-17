@@ -35,7 +35,7 @@ public class SingleRedisCache implements Cache {
         this.cacheSpace = cacheSpace;
         this.serializer = serializer;
 
-        StatefulRedisConnection<Object, Object> connect = redisClient.connect(new PbObjectRedisCodec(serializer));
+        StatefulRedisConnection<Object, Object> connect = redisClient.connect(new ObjectRedisCodec(serializer));
         syncCommand = connect.sync();
         asyncCommand = connect.async();
         cacheSpaceVersionKey = "v:" + cacheSpaceName;
