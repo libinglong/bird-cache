@@ -66,8 +66,8 @@ class DefaultErrorHandler implements ErrorHandler {
                         }
                         Cache cache = secondaryRedisManager.getCache(errorCache.cacheSpaceName);
                         if(ErrorOp.SET_KVS.equals(errorCache.errorOp)){
-                            Map<?, ?> kvs = (Map<?, ?>) errorCache.key;
-                            kvs.forEach((o, o2) -> cache.delete(o));
+                            errorCache.kvs
+                                    .forEach((o, o2) -> cache.delete(o));
                         } else if (ErrorOp.CLEAR.equals(errorCache.errorOp)){
                             cache.clear();
                         } else {

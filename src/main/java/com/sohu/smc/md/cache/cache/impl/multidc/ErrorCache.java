@@ -1,5 +1,7 @@
 package com.sohu.smc.md.cache.cache.impl.multidc;
 
+import java.util.Map;
+
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
@@ -11,6 +13,7 @@ class ErrorCache {
     ErrorOp errorOp;
     Object key;
     Object value;
+    Map<Object,Object> kvs;
     Throwable e;
 
 }
