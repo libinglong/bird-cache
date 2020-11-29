@@ -49,12 +49,14 @@ public class SyncRedisCacheManager implements IRedisCacheManager, InitializingBe
     }
 
     @Override
-    public void afterPropertiesSet() {
+    public void afterPropertiesSet() throws Exception {
         primaryRedisCacheManager.afterPropertiesSet();
         secondaryRedisCacheManager.afterPropertiesSet();
         if (syncHandler == null){
-            syncHandler = new RedisSyncHandler(primaryRedisURI, primaryClientResources, secondaryRedisURI,
+            RedisSyncHandler redisSyncHandler = new RedisSyncHandler(primaryRedisURI, primaryClientResources, secondaryRedisURI,
                     secondaryClientResources, serializer);
+            redisSyncHandler.afterPropertiesSet();
+            syncHandler = redisSyncHandler;
         }
     }
 

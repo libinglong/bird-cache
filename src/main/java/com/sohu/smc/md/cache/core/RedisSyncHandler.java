@@ -24,7 +24,7 @@ import java.time.temporal.ChronoUnit;
  */
 public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
-    private final CacheManager secondaryRedisCacheManager;
+    private final RedisCacheManager secondaryRedisCacheManager;
     private final RedisAsyncCommands<Object, Object> primaryAsyncCommands;
     private final RedisAsyncCommands<Object, Object> secondaryAsyncCommands;
     private static final String ERROR_SYNC_EVENT = "ERROR_SYNC_EVENT";
@@ -87,6 +87,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        secondaryRedisCacheManager.afterPropertiesSet();
         Flux.interval(Duration.of(200, ChronoUnit.MILLIS))
                 .flatMap(aLong -> Mono.fromCompletionStage(secondaryAsyncCommands.ping()))
                 .then(Mono.fromCompletionStage(primaryAsyncCommands.srandmember(ERROR_SYNC_EVENT)))
