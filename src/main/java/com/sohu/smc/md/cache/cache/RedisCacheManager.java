@@ -46,7 +46,7 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        redisClient = RedisClientUtils.initRedisClient(redisURI, clientResources, ClientOptions.DisconnectedBehavior.REJECT_COMMANDS);
+        redisClient = RedisClientUtils.initRedisClient(redisURI, clientResources);
         if (serializer == null){
             serializer = new PbSerializer();
         }

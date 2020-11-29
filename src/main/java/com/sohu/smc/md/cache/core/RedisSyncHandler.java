@@ -34,10 +34,10 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
         Assert.notNull(primaryClientResources,"primaryClientResources can not be null");
         Assert.notNull(secondaryRedisURI,"secondaryRedisURI can not be null");
         Assert.notNull(secondaryClientResources,"secondaryClientResources can not be null");
-        primaryAsyncCommands = RedisClientUtils.initRedisClient(primaryRedisURI, primaryClientResources, ClientOptions.DisconnectedBehavior.ACCEPT_COMMANDS)
+        primaryAsyncCommands = RedisClientUtils.initRedisClient(primaryRedisURI, primaryClientResources)
                 .connect(new ObjectRedisCodec(serializer))
                 .async();
-        secondaryAsyncCommands = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources, ClientOptions.DisconnectedBehavior.REJECT_COMMANDS)
+        secondaryAsyncCommands = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources)
                 .connect(new ObjectRedisCodec(serializer))
                 .async();
         this.secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources);
