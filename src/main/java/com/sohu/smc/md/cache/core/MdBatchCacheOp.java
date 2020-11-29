@@ -85,7 +85,11 @@ public class MdBatchCacheOp {
                 })
                 .map(o -> (List<?>)o)
                 .flatMapMany(Flux::fromIterable)
-                .collectMap(this.retKeyExpr::getValue)
+                .collectMap(o -> {
+                    ParamEvaluationContext context = new ParamEvaluationContext(methodInvocation.getArguments());
+                    context.setVariable("obj", o);
+                    return retKeyExpr.getValue(context);
+                })
                 .zipWith(Mono.just(entries))
                 .doOnNext(tuple -> {
                     Map<Object, ?> map = tuple.getT1();
