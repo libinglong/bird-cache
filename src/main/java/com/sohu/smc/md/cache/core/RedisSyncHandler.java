@@ -53,8 +53,8 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Clear)
                             .build();
-                    primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op);
-                    return Mono.empty();
+                    return Mono.fromCompletionStage(primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op))
+                            .then();
                 });
     }
 
@@ -69,8 +69,8 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .op(SyncOp.Op.Evict)
                             .key(key)
                             .build();
-                    primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op);
-                    return Mono.empty();
+                    return Mono.fromCompletionStage(primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op))
+                            .then();
                 });
     }
 
@@ -86,8 +86,8 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .key(key)
                             .value(value)
                             .build();
-                    primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op);
-                    return Mono.empty();
+                    return Mono.fromCompletionStage(primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op))
+                            .then();
                 });
     }
 
