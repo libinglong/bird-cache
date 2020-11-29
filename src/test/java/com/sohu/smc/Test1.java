@@ -26,16 +26,21 @@ public class Test1 {
 
     private CountDownLatch latch = new CountDownLatch(1);
 
-//    @Test
+    @Test
     public void fun() throws InterruptedException {
-        CompletableFuture<Object> future = new CompletableFuture<>();
-        boolean complete = future.complete(null);
-        if (complete){
-            System.out.println("com");
-            Mono.fromFuture(future)
-                    .subscribe(System.out::println);
-        }
-        System.out.println("aw");
+        CompletableFuture<String> stringCompletableFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                System.out.println(22234244314L);
+                Thread.sleep(3000L);
+                System.out.println(224314);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return "sa";
+        });
+        Mono.fromFuture(stringCompletableFuture)
+                .timeout(Duration.of(300, ChronoUnit.MILLIS))
+                .subscribe(System.out::println);
         latch.await();
     }
 

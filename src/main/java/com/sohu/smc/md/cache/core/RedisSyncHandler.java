@@ -47,6 +47,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     public Mono<Void> clearSync(String cacheSpaceName) {
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .clear()
+                .timeout(Duration.of(10, ChronoUnit.MILLIS))
                 .doOnError(throwable -> {
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
@@ -60,6 +61,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     public Mono<Void> evictSync(String cacheSpaceName, Object key) {
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
+                .timeout(Duration.of(10, ChronoUnit.MILLIS))
                 .doOnError(throwable -> {
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
@@ -74,6 +76,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     public Mono<Void> putSync(String cacheSpaceName, Object key, Object value) {
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
+                .timeout(Duration.of(10, ChronoUnit.MILLIS))
                 .doOnError(throwable -> {
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
