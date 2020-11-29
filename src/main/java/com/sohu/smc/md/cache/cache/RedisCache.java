@@ -51,14 +51,14 @@ public class RedisCache implements Cache {
     @Override
     public Mono<Void> delete(Object key) {
         return processSpace(key)
-                .map(o -> Mono.fromCompletionStage(asyncCommand.del(o)))
+                .flatMap(o -> Mono.fromCompletionStage(asyncCommand.del(o)))
                 .then();
     }
 
     @Override
     public Mono<Void> set(Object key, Object val, long time) {
         return processSpace(key)
-                .map(o -> Mono.fromCompletionStage(asyncCommand.psetex(o, time, val)))
+                .flatMap(o -> Mono.fromCompletionStage(asyncCommand.psetex(o, time, val)))
                 .then();
     }
 
@@ -72,7 +72,7 @@ public class RedisCache implements Cache {
     @Override
     public Mono<Object> get(Object key) {
         return processSpace(key)
-                .map(o -> Mono.fromCompletionStage(asyncCommand.get(o)));
+                .flatMap(o -> Mono.fromCompletionStage(asyncCommand.get(o)));
     }
 
     @Override
