@@ -49,15 +49,13 @@ public class CacheSpaceImpl implements CacheSpace {
 
     @Override
     public Mono<String> getVersion(String cacheSpaceVersionKey) {
-        return Mono.just(versionMap.get(cacheSpaceVersionKey))
-                .filter(Objects::nonNull)
+        return Mono.justOrEmpty(versionMap.get(cacheSpaceVersionKey))
                 .switchIfEmpty(doGetVersion(cacheSpaceVersionKey))
                 .doOnNext(version -> versionMap.put(cacheSpaceVersionKey,version));
     }
 
     private Mono<String> doGetVersion(String cacheSpaceVersionKey) {
         Mono<String> versionCache = Mono.fromCompletionStage(stringAsyncCommand.get(cacheSpaceVersionKey))
-                .filter(version -> !StringUtils.isEmpty(version))
                 .switchIfEmpty(Mono.just("0"))
                 .cache();
         return versionCache.flatMap(version -> Mono.fromCompletionStage(stringAsyncCommand.setnx(cacheSpaceVersionKey, version)))

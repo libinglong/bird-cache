@@ -50,8 +50,7 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
         MdCacheableOp cacheableOp = methodOpContext.getCacheableOp();
         MdBatchCacheOp batchCacheOp = methodOpContext.getBatchCacheOp();
         MdCacheClearOp clearOp = methodOpContext.getClearOp();
-        Flux<Void> clearCache = Mono.just(clearOp)
-                .filter(Objects::nonNull)
+        Flux<Void> clearCache = Mono.justOrEmpty(clearOp)
                 .flatMap(MdCacheClearOp::clear)
                 .thenMany(Flux.fromIterable(evictOps))
                 .flatMap(mdCacheEvictOp -> mdCacheEvictOp.delayInvalid(invocationContext))
@@ -59,7 +58,7 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
                 .flatMap(mdCachePutOp -> mdCachePutOp.delayInvalid(invocationContext));
         Mono<?> resultCache = clearCache.then(processCache(cacheableOp, batchCacheOp, invocationContext))
                 .cache();
-        Mono<?> result = resultCache.zipWith(Mono.just(putOps))
+        Mono<?> result = resultCache.zipWith(Mono.justOrEmpty(putOps))
                 .flatMapMany(tuple -> Flux.fromIterable(tuple.getT2())
                         .flatMap(mdCachePutOp -> mdCachePutOp.set(invocationContext, tuple.getT1())))
                 .thenMany(Flux.fromIterable(evictOps))

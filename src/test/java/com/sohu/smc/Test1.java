@@ -11,6 +11,10 @@ import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -22,11 +26,16 @@ public class Test1 {
 
     private CountDownLatch latch = new CountDownLatch(1);
 
-    @Test
+//    @Test
     public void fun() throws InterruptedException {
-        Hooks.onOperatorDebug();
-        Flux.interval(Duration.of(1, ChronoUnit.MILLIS))
-                .subscribe();
+        CompletableFuture<Object> future = new CompletableFuture<>();
+        boolean complete = future.complete(null);
+        if (complete){
+            System.out.println("com");
+            Mono.fromFuture(future)
+                    .subscribe(System.out::println);
+        }
+        System.out.println("aw");
         latch.await();
     }
 

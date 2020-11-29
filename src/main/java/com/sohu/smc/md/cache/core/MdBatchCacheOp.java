@@ -60,7 +60,7 @@ public class MdBatchCacheOp {
     public Mono<List<Object>> processBatchCacheOp(InvocationContext invocationContext) {
         MethodInvocation methodInvocation = invocationContext.getMethodInvocation();
         List<Entry> entries = getEntries(methodInvocation);
-        return Mono.just(entries)
+        return Mono.justOrEmpty(entries)
                 .flatMapMany(Flux::fromIterable)
                 .map(Entry::getKeyObj)
                 .collectList()
@@ -68,7 +68,7 @@ public class MdBatchCacheOp {
                         .flatMapMany(Flux::fromIterable)
                         .zipWith(Flux.fromIterable(keys))
                         .collectMap(Tuple2::getT1, Tuple2::getT2))
-                .zipWith(Mono.just(entries))
+                .zipWith(Mono.justOrEmpty(entries))
                 .doOnNext(tuple -> {
                     Map<?, ?> map = tuple.getT1();
                     List<Entry> entries1 = tuple.getT2();
@@ -90,7 +90,7 @@ public class MdBatchCacheOp {
                     context.setVariable("obj", o);
                     return retKeyExpr.getValue(context);
                 })
-                .zipWith(Mono.just(entries))
+                .zipWith(Mono.justOrEmpty(entries))
                 .doOnNext(tuple -> {
                     Map<Object, ?> map = tuple.getT1();
                     List<Entry> entries1 = tuple.getT2();

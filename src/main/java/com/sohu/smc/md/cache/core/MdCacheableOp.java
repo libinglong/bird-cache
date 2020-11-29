@@ -40,7 +40,6 @@ public class MdCacheableOp {
     public Mono<Object> processCacheableOp(InvocationContext invocationContext) {
         Object key = OpHelper.getKey(invocationContext, this, keyExpr);
         return getCacheValue(key)
-                .filter(Objects::nonNull)
                 .map(ValueWrapper::get)
                 .switchIfEmpty(invocationContext.doInvoke())
                 .flatMap(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()));
