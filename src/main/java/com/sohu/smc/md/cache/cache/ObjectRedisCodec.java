@@ -1,4 +1,4 @@
-package com.sohu.smc.md.cache.cache.impl.simple;
+package com.sohu.smc.md.cache.cache;
 
 import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.codec.RedisCodec;
@@ -14,7 +14,7 @@ public class ObjectRedisCodec implements RedisCodec<Object,Object> {
 
     private static final byte[] EMPTY = new byte[0];
 
-    private Serializer serializer;
+    private final Serializer serializer;
 
     public ObjectRedisCodec(Serializer serializer) {
         this.serializer = serializer;

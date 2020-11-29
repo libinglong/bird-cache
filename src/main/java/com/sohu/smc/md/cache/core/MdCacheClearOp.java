@@ -1,23 +1,30 @@
 package com.sohu.smc.md.cache.core;
 
-import com.sohu.smc.md.cache.anno.MdCacheClear;
-import com.sohu.smc.md.cache.spring.CacheConfig;
-import com.sohu.smc.md.cache.spring.SpelParseService;
+import reactor.core.publisher.Mono;
 
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/10
  */
-public class MdCacheClearOp extends AbstractOp<MdCacheClear> {
+public class MdCacheClearOp {
 
-    public MdCacheClearOp(MetaData<MdCacheClear> metaData, Cache cache, CacheConfig cacheConfig,
-                         SpelParseService spelParseService) {
-        super(metaData, cache, cacheConfig, spelParseService);
+    private final Cache cache;
+    private final SyncHandler syncHandler;
+    private final boolean needSync;
+
+    public MdCacheClearOp(Cache cache, boolean needSync, SyncHandler syncHandler) {
+        this.cache = cache;
+        this.syncHandler = syncHandler;
+        this.needSync = needSync;
     }
 
-    public void clear(){
-        cache.clear();
+    public Mono<Void> clear(){
+        Mono<Void> clear = cache.clear();
+        if (!needSync){
+            return clear;
+        }
+        return clear.then(syncHandler.clearSync(cache.getCacheSpaceName()));
     }
 
 }

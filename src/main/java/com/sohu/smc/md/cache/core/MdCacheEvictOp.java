@@ -3,30 +3,42 @@ package com.sohu.smc.md.cache.core;
 import com.sohu.smc.md.cache.anno.MdCacheEvict;
 import com.sohu.smc.md.cache.spring.CacheConfig;
 import com.sohu.smc.md.cache.spring.SpelParseService;
+import org.springframework.expression.Expression;
+import reactor.core.publisher.Mono;
 
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/29
  */
-public class MdCacheEvictOp extends AbstractKeyOp<MdCacheEvict> {
+public class MdCacheEvictOp {
 
-    public MdCacheEvictOp(MetaData<MdCacheEvict> metaData, Cache cache, CacheConfig cacheConfig,
-                          SpelParseService spelParseService) {
-        super(metaData, cache, cacheConfig, spelParseService);
+    private final Cache cache;
+    private final CacheConfig cacheConfig;
+    private final Expression keyExpr;
+    private final boolean needSync;
+    private final SyncHandler syncHandler;
+
+    public MdCacheEvictOp(MdCacheEvict mdCacheEvict, Cache cache, CacheConfig cacheConfig,
+                          SpelParseService spelParseService, boolean needSync, SyncHandler syncHandler) {
+        this.cache = cache;
+        this.cacheConfig = cacheConfig;
+        this.needSync = needSync;
+        this.syncHandler = syncHandler;
+        this.keyExpr = spelParseService.getExpression(mdCacheEvict.key());
     }
 
-    public void delayInvalid(InvocationContext invocationContext) throws RuntimeException {
-        cache.expire(getKey(invocationContext), getDelayInvalidTime());
+    public Mono<Void> delayInvalid(InvocationContext invocationContext) throws RuntimeException {
+        return cache.expire(OpHelper.getKey(invocationContext, this, keyExpr), cacheConfig.getDefaultDelayInvalidTime());
     }
 
-    public void delete(InvocationContext invocationContext) throws RuntimeException {
-        cache.delete(getKey(invocationContext));
+    public Mono<Void> delete(InvocationContext invocationContext) throws RuntimeException {
+        Object key = OpHelper.getKey(invocationContext, this, keyExpr);
+        Mono<Void> delete = cache.delete(key);
+        if (!needSync){
+            return delete;
+        }
+        return delete.then(syncHandler.evictSync(cache.getCacheSpaceName(), key));
     }
 
-    @Override
-    protected String getKeyExpr() {
-        return metaData.getAnno()
-                .key();
-    }
 }

@@ -6,11 +6,11 @@ package com.sohu.smc.md.cache.core;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/29
  */
-class ValueWrapper {
+public class ValueWrapper {
 
     private Object o;
 
-    public ValueWrapper(Object o) {
+    private ValueWrapper(Object o) {
         this.o = o;
     }
 
@@ -24,5 +24,13 @@ class ValueWrapper {
         }
         return o;
     }
+
+    public static ValueWrapper wrap(Object o){
+        if (o == null){
+            return null;
+        }
+        return new ValueWrapper(o);
+    }
+
 
 }

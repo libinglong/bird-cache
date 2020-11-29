@@ -3,30 +3,42 @@ package com.sohu.smc.md.cache.core;
 import com.sohu.smc.md.cache.anno.MdCachePut;
 import com.sohu.smc.md.cache.spring.CacheConfig;
 import com.sohu.smc.md.cache.spring.SpelParseService;
+import org.springframework.expression.Expression;
+import reactor.core.publisher.Mono;
 
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/29
  */
-public class MdCachePutOp extends AbstractKeyOp<MdCachePut> {
+public class MdCachePutOp {
 
-    public MdCachePutOp(MetaData<MdCachePut> metaData, Cache cache, CacheConfig cacheConfig,
-                          SpelParseService spelParseService) {
-        super(metaData, cache, cacheConfig, spelParseService);
+    private final Cache cache;
+    private final CacheConfig cacheConfig;
+    private final Expression keyExpr;
+    private final boolean needSync;
+    private final SyncHandler syncHandler;
+
+    public MdCachePutOp(MdCachePut mdCachePut, Cache cache, CacheConfig cacheConfig,
+                        SpelParseService spelParseService, boolean needSync, SyncHandler syncHandler) {
+        this.cache = cache;
+        this.cacheConfig = cacheConfig;
+        this.needSync = needSync;
+        this.syncHandler = syncHandler;
+        this.keyExpr = spelParseService.getExpression(mdCachePut.key());
     }
 
-    public void delayInvalid(InvocationContext invocationContext) throws RuntimeException {
-        cache.expire(getKey(invocationContext), getDelayInvalidTime());
+    public Mono<Void> delayInvalid(InvocationContext invocationContext) throws RuntimeException {
+        return cache.expire(OpHelper.getKey(invocationContext, this, keyExpr), cacheConfig.getDefaultDelayInvalidTime());
     }
 
-    public void set(InvocationContext invocationContext, Object value){
-        cache.set(getKey(invocationContext), value, getExpiredTime());
+    public Mono<Void> set(InvocationContext invocationContext, Object value){
+        Object key = OpHelper.getKey(invocationContext, this, keyExpr);
+        Mono<Void> set = cache.set(key, value, cacheConfig.getDefaultExpireTime());
+        if (!needSync){
+            return set;
+        }
+        return set.then(syncHandler.putSync(cache.getCacheSpaceName(), key, value));
     }
 
-    @Override
-    protected String getKeyExpr() {
-        return metaData.getAnno()
-                .key();
-    }
 }

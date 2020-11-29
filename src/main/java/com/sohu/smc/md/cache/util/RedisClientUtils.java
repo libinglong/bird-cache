@@ -12,7 +12,7 @@ import io.lettuce.core.resource.ClientResources;
  */
 public class RedisClientUtils {
 
-    public static RedisClient initRedisClient(RedisURI redisURI, ClientResources clientResources){
+    public static RedisClient initRedisClient(RedisURI redisURI, ClientResources clientResources, ClientOptions.DisconnectedBehavior disconnectedBehavior){
         RedisClient redisClient;
         if (clientResources == null){
             redisClient = RedisClient.create(redisURI);
@@ -20,8 +20,7 @@ public class RedisClientUtils {
             redisClient = RedisClient.create(clientResources, redisURI);
         }
         ClientOptions options = ClientOptions.builder()
-                .autoReconnect(true)
-                .disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS)
+                .disconnectedBehavior(disconnectedBehavior)
                 .build();
         redisClient.setOptions(options);
         return redisClient;

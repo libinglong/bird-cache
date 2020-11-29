@@ -4,11 +4,16 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
+import java.lang.annotation.Annotation;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 此类用于缓存一些中间变量
@@ -22,12 +27,10 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class InvocationContext {
 
-    private ExecutorService executorService;
-
     @Getter
     private final MethodInvocation methodInvocation;
 
-    private Map<AbstractKeyOp<?>, OpContext> opContextMap = new ConcurrentHashMap<>(4);
+    private final Map<Object, OpContext> opContextMap = new ConcurrentHashMap<>(4);
 
     /**
      * 执行时间 ms
@@ -35,23 +38,39 @@ public class InvocationContext {
     @Setter
     private Long execTime;
 
-    public InvocationContext(MethodInvocation methodInvocation, ExecutorService executorService){
+    public InvocationContext(MethodInvocation methodInvocation) {
         this.methodInvocation = methodInvocation;
-        this.executorService = executorService;
     }
 
-    public OpContext getOpContext(AbstractKeyOp<?> abstractKeyOp) {
-        return opContextMap.computeIfAbsent(abstractKeyOp, abstractOpTmp -> new OpContext());
+    public OpContext getOpContext(Object op) {
+        return opContextMap.computeIfAbsent(op, unused -> new OpContext());
     }
 
-    public Object doInvoke() throws Throwable {
-        return executorService.submit(() -> {
-            try {
-                return methodInvocation.proceed();
-            } catch (Throwable throwable) {
-                throw new RuntimeException(throwable);
-            }
-        }).get(execTime, TimeUnit.MILLISECONDS);
+    public Mono<?> doInvoke() {
+        if (methodInvocation.getMethod()
+                .getReturnType()
+                .isAssignableFrom(Mono.class)) {
+            return (Mono<?>) call();
+        } else if (methodInvocation.getMethod()
+                .getReturnType()
+                .isAssignableFrom(Flux.class)) {
+            return Mono.error(new RuntimeException("do not support Flux return type"));
+        } else if (methodInvocation.getMethod()
+                .getReturnType()
+                .isAssignableFrom(CompletionStage.class)) {
+            return Mono.fromCompletionStage((CompletionStage<?>) call());
+        }
+        return Mono.fromCallable(this::call)
+                .subscribeOn(Schedulers.elastic())
+                .timeout(Duration.of(execTime, ChronoUnit.MILLIS));
+    }
+
+    private Object call() {
+        try {
+            return methodInvocation.proceed();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

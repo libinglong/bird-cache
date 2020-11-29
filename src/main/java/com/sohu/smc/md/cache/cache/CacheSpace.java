@@ -1,4 +1,6 @@
-package com.sohu.smc.md.cache.cache.impl;
+package com.sohu.smc.md.cache.cache;
+
+import reactor.core.publisher.Mono;
 
 /**
  * @author binglongli217932
@@ -11,13 +13,13 @@ public interface CacheSpace {
      * 增加缓存空间版本
      * @param cacheSpaceVersionKey
      */
-    void incrVersion(String cacheSpaceVersionKey);
+    Mono<Void> incrVersion(String cacheSpaceVersionKey);
 
     /**
      * 获取命名空间前缀
      * @param cacheSpaceVersionKey
      * @return
      */
-    String getVersion(String cacheSpaceVersionKey);
+    Mono<String> getVersion(String cacheSpaceVersionKey);
 
 }

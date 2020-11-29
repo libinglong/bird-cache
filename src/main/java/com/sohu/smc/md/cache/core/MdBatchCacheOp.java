@@ -7,11 +7,13 @@ import com.sohu.smc.md.cache.spring.SpelParseService;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 /**
@@ -19,89 +21,88 @@ import java.util.stream.Collectors;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/29
  */
-public class MdBatchCacheOp extends AbstractKeyOp<MdBatchCache> {
+public class MdBatchCacheOp {
 
-    public MdBatchCacheOp(MetaData<MdBatchCache> metaData, Cache cache, CacheConfig cacheConfig,
+    private final Expression listExpr;
+    private final Expression retKeyExpr;
+    private final Expression keyExpr;
+    private final Cache cache;
+    private final CacheConfig cacheConfig;
+    private final int listIndex;
+
+    public MdBatchCacheOp(MdBatchCache mdBatchCache, Cache cache, CacheConfig cacheConfig,
                           SpelParseService spelParseService) {
-        super(metaData, cache, cacheConfig, spelParseService);
-        this.listExpr = spelParseService.getExpression("#p" + metaData.getAnno().index());
+        this.cache = cache;
+        this.cacheConfig = cacheConfig;
+        this.keyExpr = spelParseService.getExpression(mdBatchCache.key());
+        this.listExpr = spelParseService.getExpression("p" + mdBatchCache.index());
+        this.retKeyExpr = spelParseService.getExpression(mdBatchCache.retKey());
+        this.listIndex = mdBatchCache.index();
     }
 
-    private Expression listExpr;
-
-    public List<BatchEntry> getBatchEntries(MethodInvocation methodInvocation){
+    public List<Entry> getEntries(MethodInvocation methodInvocation){
         EvaluationContext context = new ParamEvaluationContext(methodInvocation.getArguments());
         List<?> list = listExpr.getValue(context, List.class);
-        List<BatchEntry> batchEntries = new ArrayList<>();
+        List<Entry> entries = new ArrayList<>();
         for (Object o : list){
             EvaluationContext ctx = new ParamEvaluationContext(methodInvocation.getArguments());
             ctx.setVariable("obj", o);
-            Object keyObj = keyExpression.getValue(ctx);
-            BatchEntry batchEntry = new BatchEntry();
-            batchEntry.setOriginObj(o);
-            batchEntry.setKeyObj(keyObj);
-            batchEntries.add(batchEntry);
+            Object keyObj = keyExpr.getValue(ctx);
+            Entry entry = new Entry();
+            entry.setOriginObj(o);
+            entry.setKeyObj(keyObj);
+            entries.add(entry);
         }
-        return batchEntries;
-    }
-
-    @Override
-    protected String getKeyExpr() {
-        return metaData.getAnno()
-                .key();
-    }
-
-    public List<ValueWrapper> getBatchCache(List<Object> keys) throws ExecutionException, InterruptedException {
-        return cache.get(keys)
-                .stream()
-                .map(this::wrapper)
-                .collect(Collectors.toList());
-    }
-
-    public int getListIndex() {
-        return metaData.getAnno().index();
+        return entries;
     }
 
 
-    public List<?> processBatchCacheOp(InvocationContext invocationContext) throws Throwable {
+    public Mono<List<Object>> processBatchCacheOp(InvocationContext invocationContext) {
         MethodInvocation methodInvocation = invocationContext.getMethodInvocation();
-        List<BatchEntry> batchEntries = getBatchEntries(methodInvocation);
-        List<Object> keyList = batchEntries.stream()
-                .map(BatchEntry::getKeyObj)
-                .collect(Collectors.toList());
-        List<ValueWrapper> cacheList = getBatchCache(keyList);
-        for (int i = 0; i < batchEntries.size(); i++) {
-            batchEntries.get(i)
-                    .setValueWrapper(cacheList.get(i));
-        }
-        fetchIfMissing(batchEntries, invocationContext);
-        return batchEntries.stream()
-                .map(batchEntry -> batchEntry.getValueWrapper().get())
-                .collect(Collectors.toList());
-    }
-
-    private void fetchIfMissing(List<BatchEntry> batchEntries,InvocationContext invocationContext)
-            throws Throwable {
-        List<BatchEntry> missingBatchEntries = batchEntries.stream()
-                .filter(batchEntry -> batchEntry.getValueWrapper() == null)
-                .collect(Collectors.toList());
-        if (missingBatchEntries.size() == 0){
-            return;
-        }
-        List<Object> missingList = missingBatchEntries.stream()
-                .map(BatchEntry::getOriginObj)
-                .collect(Collectors.toList());
-        invocationContext.getMethodInvocation()
-                .getArguments()[getListIndex()] = missingList;
-        Object result = invocationContext.doInvoke();
-        List<?> missingValueList = (List<?>) result;
-        for (int i = 0; i < missingBatchEntries.size(); i++) {
-            missingBatchEntries.get(i)
-                    .setValueWrapper(new ValueWrapper(missingValueList.get(i)));
-        }
-        Map<Object, Object> kvs = missingBatchEntries.stream()
-                .collect(Collectors.toMap(BatchEntry::getKeyObj, batchEntry -> batchEntry.getValueWrapper().get()));
-        cache.setKvs(kvs, getExpiredTime());
+        List<Entry> entries = getEntries(methodInvocation);
+        return Mono.just(entries)
+                .flatMapMany(Flux::fromIterable)
+                .map(Entry::getKeyObj)
+                .collectList()
+                .flatMap(keys -> cache.get(keys)
+                        .flatMapMany(Flux::fromIterable)
+                        .zipWith(Flux.fromIterable(keys))
+                        .collectMap(Tuple2::getT1, Tuple2::getT2))
+                .zipWith(Mono.just(entries))
+                .doOnNext(tuple -> {
+                    Map<?, ?> map = tuple.getT1();
+                    List<Entry> entries1 = tuple.getT2();
+                    entries1.forEach(entry -> entry.setValueWrapper(ValueWrapper.wrap(map.get(entry.getKeyObj()))));
+                })
+                .thenMany(Flux.fromIterable(entries))
+                .filter(entry -> entry.getValueWrapper() == null)
+                .map(Entry::getOriginObj)
+                .collectList()
+                .flatMap(objects -> {
+                    invocationContext.getMethodInvocation()
+                            .getArguments()[listIndex] = objects;
+                    return invocationContext.doInvoke();
+                })
+                .map(o -> (List<?>)o)
+                .flatMapMany(Flux::fromIterable)
+                .collectMap(this.retKeyExpr::getValue)
+                .zipWith(Mono.just(entries))
+                .doOnNext(tuple -> {
+                    Map<Object, ?> map = tuple.getT1();
+                    List<Entry> entries1 = tuple.getT2();
+                    entries1.forEach(entry -> {
+                        Object o = map.get(entry.getKeyObj());
+                        if (o != null){
+                            entry.setValueWrapper(ValueWrapper.wrap(o));
+                        }
+                    });
+                    Map<Object, Object> kvs = entries1.stream()
+                            .collect(Collectors.toMap(Entry::getKeyObj, entry -> entry.getValueWrapper().get()));
+                    cache.setKvs(kvs, cacheConfig.getDefaultExpireTime());
+                })
+                .thenMany(Flux.fromIterable(entries))
+                .map(entry -> entry.getValueWrapper().get())
+                .collectList();
     }
 
 }

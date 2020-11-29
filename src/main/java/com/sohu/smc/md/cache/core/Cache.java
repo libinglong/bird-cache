@@ -1,8 +1,9 @@
 package com.sohu.smc.md.cache.core;
 
+import reactor.core.publisher.Mono;
+
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 /**
  * @author binglongli217932
@@ -22,52 +23,53 @@ public interface Cache {
      * key在time指定的时间后过期
      * @param key the key of this cache
      * @param milliseconds time to expire in ms
+     * @return
      */
-    void expire(Object key, long milliseconds);
+    Mono<Void> expire(Object key, long milliseconds);
 
     /**
      * 删除key
      * @param key the key of this cache
+     * @return
      */
-    void delete(Object key);
+    Mono<Void> delete(Object key);
 
     /**
      * 添加缓存
      * @param key the key of this cache
      * @param val the value to be updated of this cache
      * @param milliseconds time to expire in ms
+     * @return
      */
-    void set(Object key, Object val, long milliseconds);
+    Mono<Void> set(Object key, Object val, long milliseconds);
 
     /**
      * 添加缓存
      * @param kvs kvs
      * @param milliseconds time time to expire in ms
-     * @throws ExecutionException e
-     * @throws InterruptedException e
+     * @return Flux<String>
      */
-    void setKvs(Map<Object,Object> kvs, long milliseconds) throws ExecutionException, InterruptedException;
+    Mono<Void> setKvs(Map<Object,Object> kvs, long milliseconds);
 
     /**
      * 缓存查询
      * @param key the key of this cache
      * @return 缓存的对象.如果缓存未命中,返回null;如果缓存的值为null,返回{@link NullValue#NULL},
      */
-    Object get(Object key);
+    Mono<Object> get(Object key);
 
     /**
      * 批量缓存查询需要实现此接口,来达到更好的性能
      * 参数和返回值顺序必须是对应的
      * @param keys the keys of this cache
      * @return the list mapping to keys in order
-     * @throws ExecutionException e
-     * @throws InterruptedException e
      */
-    List<Object> get(List<Object> keys) throws ExecutionException, InterruptedException;
+    Mono<List<Object>> get(List<Object> keys);
 
     /**
      * 清空缓存
+     * @return
      */
-    void clear();
+    Mono<Void> clear();
 
 }

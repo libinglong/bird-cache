@@ -4,15 +4,16 @@ import com.sohu.smc.md.cache.core.*;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.support.StaticMethodMatcherPointcut;
-import org.springframework.core.task.AsyncTaskExecutor;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Method;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.stream.Stream;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @author binglongli217932
@@ -21,15 +22,15 @@ import java.util.stream.Stream;
  */
 public class CacheOpInvocation extends StaticMethodMatcherPointcut implements MethodInterceptor{
 
-    private CacheOpParseService cacheOpParseService;
-    private ExecutorService executorService;
+    private final CacheOpParseService cacheOpParseService;
+    private final CacheConfig cacheConfig;
 
-    public CacheOpInvocation(CacheOpParseService cacheOpParseService, ExecutorService executorService){
+    public CacheOpInvocation(CacheOpParseService cacheOpParseService, CacheConfig cacheConfig) {
         this.cacheOpParseService = cacheOpParseService;
-        this.executorService = executorService;
+        this.cacheConfig = cacheConfig;
     }
 
-    private Map<Method,MethodOpContext> contextMap = new ConcurrentHashMap<>(256);
+    private final Map<Method,MethodOpContext> contextMap = new ConcurrentHashMap<>(256);
 
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
@@ -41,47 +42,66 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
 
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
-        InvocationContext invocationContext = new InvocationContext(invocation, executorService);
+        InvocationContext invocationContext = new InvocationContext(invocation);
         MethodOpContext methodOpContext = contextMap.get(invocation.getMethod());
         List<MdCacheEvictOp> evictOps = methodOpContext.getEvictOps();
         List<MdCachePutOp> putOps = methodOpContext.getPutOps();
-        invocationContext.setExecTime(getMaxExecTime(evictOps,putOps));
+        invocationContext.setExecTime(cacheConfig.getDefaultDelayInvalidTime());
         MdCacheableOp cacheableOp = methodOpContext.getCacheableOp();
         MdBatchCacheOp batchCacheOp = methodOpContext.getBatchCacheOp();
         MdCacheClearOp clearOp = methodOpContext.getClearOp();
-        if (clearOp != null){
-            clearOp.clear();
-        }
-        evictOps.forEach(mdCacheEvictOp -> mdCacheEvictOp.delayInvalid(invocationContext));
-        putOps.forEach(mdCachePutOp -> mdCachePutOp.delayInvalid(invocationContext));
-        Object result;
-        if (cacheableOp != null){
-            result = processCacheableOp(cacheableOp, invocationContext);
-        } else if (batchCacheOp != null){
-            result = processBatchCacheOp(batchCacheOp, invocationContext);
-        } else {
-            result = invocationContext.doInvoke();
-        }
-        putOps.forEach(mdCachePutOp -> mdCachePutOp.set(invocationContext, result));
-        evictOps.forEach(mdCacheEvictOp -> mdCacheEvictOp.delete(invocationContext));
-        return result;
+        Flux<Void> clearCache = Mono.just(clearOp)
+                .filter(Objects::nonNull)
+                .flatMap(MdCacheClearOp::clear)
+                .thenMany(Flux.fromIterable(evictOps))
+                .flatMap(mdCacheEvictOp -> mdCacheEvictOp.delayInvalid(invocationContext))
+                .thenMany(Flux.fromIterable(putOps))
+                .flatMap(mdCachePutOp -> mdCachePutOp.delayInvalid(invocationContext));
+        Mono<?> resultCache = clearCache.then(processCache(cacheableOp, batchCacheOp, invocationContext))
+                .cache();
+        Mono<?> result = resultCache.zipWith(Mono.just(putOps))
+                .flatMapMany(tuple -> Flux.fromIterable(tuple.getT2())
+                        .flatMap(mdCachePutOp -> mdCachePutOp.set(invocationContext, tuple.getT1())))
+                .thenMany(Flux.fromIterable(evictOps))
+                .flatMap(mdCacheEvictOp -> mdCacheEvictOp.delete(invocationContext))
+                .then(resultCache);
+        return unwrapIfNecessary(result, invocation);
     }
 
-    private Object processCacheableOp(MdCacheableOp cacheableOp, InvocationContext invocationContext) throws Throwable {
+    private Object unwrapIfNecessary(Mono<?> result, MethodInvocation methodInvocation) throws ExecutionException, InterruptedException {
+        if (methodInvocation.getMethod()
+                .getReturnType()
+                .isAssignableFrom(Mono.class)) {
+            return result;
+        } else if (methodInvocation.getMethod()
+                .getReturnType()
+                .isAssignableFrom(Flux.class)) {
+            throw new RuntimeException("do not support Flux return type");
+        } else if (methodInvocation.getMethod()
+                .getReturnType()
+                .isAssignableFrom(CompletionStage.class)) {
+            return result.toFuture();
+        }
+        return result.toFuture()
+                .get();
+    }
+
+    private Mono<?> processCache(MdCacheableOp cacheableOp, MdBatchCacheOp batchCacheOp, InvocationContext invocationContext) {
+        if (cacheableOp != null) {
+            return processCacheableOp(cacheableOp, invocationContext);
+        } else if (batchCacheOp != null) {
+            return processBatchCacheOp(batchCacheOp, invocationContext);
+        } else {
+            return invocationContext.doInvoke();
+        }
+    }
+
+    private Mono<Object> processCacheableOp(MdCacheableOp cacheableOp, InvocationContext invocationContext) {
         return cacheableOp.processCacheableOp(invocationContext);
     }
 
-    private Object processBatchCacheOp(MdBatchCacheOp batchCacheOp, InvocationContext invocationContext) throws Throwable {
+    private Mono<List<Object>> processBatchCacheOp(MdBatchCacheOp batchCacheOp, InvocationContext invocationContext) {
         return batchCacheOp.processBatchCacheOp(invocationContext);
-    }
-
-    private long getMaxExecTime(List<MdCacheEvictOp> evictOps, List<MdCachePutOp> putOps){
-        return Stream.of(evictOps, putOps)
-                .flatMap(Collection::stream)
-                .filter(op -> op != null && op.getExecTime() != null)
-                .mapToLong(AbstractKeyOp::getExecTime)
-                .max()
-                .orElse(Long.MAX_VALUE);
     }
 
 }

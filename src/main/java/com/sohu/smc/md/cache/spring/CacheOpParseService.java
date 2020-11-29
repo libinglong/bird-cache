@@ -4,10 +4,9 @@ import com.sohu.smc.md.cache.anno.*;
 import com.sohu.smc.md.cache.core.*;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -17,9 +16,9 @@ import java.util.stream.Collectors;
  */
 public class CacheOpParseService {
 
-    private CacheManager cacheManager;
-    private CacheConfig cacheConfig;
-    private SpelParseService spelParseService;
+    private final CacheManager cacheManager;
+    private final CacheConfig cacheConfig;
+    private final SpelParseService spelParseService;
 
     public CacheOpParseService(CacheManager cacheManager, CacheConfig cacheConfig, SpelParseService spelParseService) {
         this.cacheManager = cacheManager;
@@ -29,62 +28,56 @@ public class CacheOpParseService {
 
     public MethodOpContext getContext(Method method){
         MethodOpContext methodOpContext = new MethodOpContext();
-        methodOpContext.setEvictOps(parseCacheOps(method, MdCacheEvictOp.class));
-        methodOpContext.setPutOps(parseCacheOps(method, MdCachePutOp.class));
-        methodOpContext.setCacheableOp(parseCacheOp(method, MdCacheableOp.class));
-        methodOpContext.setBatchCacheOp(parseCacheOp(method, MdBatchCacheOp.class));
-        methodOpContext.setClearOp(parseCacheOp(method, MdCacheClearOp.class));
+        methodOpContext.setEvictOps(parseEvictOps(method));
+        methodOpContext.setPutOps(parsePutOps(method));
+        methodOpContext.setCacheableOp(parseCacheableOp(method));
+        methodOpContext.setBatchCacheOp(parseBatchCacheOp(method));
+        methodOpContext.setClearOp(parseClearOp(method));
         return methodOpContext;
     }
 
-    private <O> List<O> parseCacheOps(Method method, Class<O> opCls){
-        return AnnotatedElementUtils.findMergedRepeatableAnnotations(method, getAnnoByOp(opCls))
+    private MdCacheClearOp parseClearOp(Method method) {
+        String cacheSpaceName = method.getDeclaringClass()
+                .getName();
+        return Optional.ofNullable(AnnotatedElementUtils.findMergedAnnotation(method, MdCacheClear.class))
+                .map(mdCacheClear -> new MdCacheClearOp(cacheManager.getCache(cacheSpaceName), cacheManager.needSync(), cacheManager.getSyncHandler()))
+                .orElse(null);
+    }
+
+    private MdBatchCacheOp parseBatchCacheOp(Method method) {
+        String cacheSpaceName = method.getDeclaringClass()
+                .getName();
+        return Optional.ofNullable(AnnotatedElementUtils.findMergedAnnotation(method, MdBatchCache.class))
+                .map(mdBatchCache -> new MdBatchCacheOp(mdBatchCache, cacheManager.getCache(cacheSpaceName), cacheConfig, spelParseService))
+                .orElse(null);
+    }
+
+    private MdCacheableOp parseCacheableOp(Method method) {
+        String cacheSpaceName = method.getDeclaringClass()
+                .getName();
+        return Optional.ofNullable(AnnotatedElementUtils.findMergedAnnotation(method, MdCacheable.class))
+                .map(mdCacheable -> new MdCacheableOp(mdCacheable, cacheManager.getCache(cacheSpaceName), cacheConfig, spelParseService))
+                .orElse(null);
+    }
+
+    private List<MdCachePutOp> parsePutOps(Method method) {
+        String cacheSpaceName = method.getDeclaringClass()
+                .getName();
+        return AnnotatedElementUtils.findMergedRepeatableAnnotations(method, MdCachePut.class)
                 .stream()
-                .map(anno -> getOpBean(method, opCls, anno))
+                .map(mdCachePut -> new MdCachePutOp(mdCachePut, cacheManager.getCache(cacheSpaceName), cacheConfig,
+                        spelParseService, cacheManager.needSync(), cacheManager.getSyncHandler()))
                 .collect(Collectors.toList());
     }
 
-    private <O> O parseCacheOp(Method method, Class<O> opCls){
-        Annotation anno = AnnotatedElementUtils.findMergedAnnotation(method, getAnnoByOp(opCls));
-        if (anno == null){
-            return null;
-        }
-        return getOpBean(method, opCls, anno);
-    }
-
-    private <O> O getOpBean(Method method, Class<O> opCls, Annotation anno) {
-        try {
-            MetaData<Object> metaData = new MetaData<>();
-            metaData.setMethod(method);
-            metaData.setAnno(anno);
-            String cacheSpaceName = method.getDeclaringClass()
-                    .getName();
-            Constructor<O> constructor = opCls.getConstructor(MetaData.class, Cache.class, CacheConfig.class, SpelParseService.class);
-            return constructor.newInstance(metaData, cacheManager.getCache(cacheSpaceName), cacheConfig, spelParseService);
-        } catch (Exception e){
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Class<? extends Annotation> getAnnoByOp(Class<?> op){
-        if (MdCacheableOp.class.equals(op)){
-            return MdCacheable.class;
-        }
-        else if (MdBatchCacheOp.class.equals(op)){
-            return MdBatchCache.class;
-        }
-        else if (MdCacheEvictOp.class.equals(op)){
-            return MdCacheEvict.class;
-        }
-        else if (MdCachePutOp.class.equals(op)){
-            return MdCachePut.class;
-        }
-        else if (MdCacheClearOp.class.equals(op)){
-            return MdCacheClear.class;
-        }
-        else {
-            throw new RuntimeException("code should never go here");
-        }
+    private List<MdCacheEvictOp> parseEvictOps(Method method) {
+        String cacheSpaceName = method.getDeclaringClass()
+                .getName();
+        return AnnotatedElementUtils.findMergedRepeatableAnnotations(method, MdCacheEvict.class)
+                .stream()
+                .map(mdCacheEvict -> new MdCacheEvictOp(mdCacheEvict, cacheManager.getCache(cacheSpaceName), cacheConfig,
+                        spelParseService, cacheManager.needSync(), cacheManager.getSyncHandler()))
+                .collect(Collectors.toList());
     }
 
 }

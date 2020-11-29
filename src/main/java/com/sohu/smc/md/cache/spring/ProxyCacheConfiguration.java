@@ -39,7 +39,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Bean
     public CacheOpInvocation cacheOpInvocation() {
-        return new CacheOpInvocation(cacheOpParseService(), cacheConfig.getExecutorService());
+        return new CacheOpInvocation(cacheOpParseService(), cacheConfig);
     }
 
     @Bean
@@ -64,7 +64,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
 
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         if (cacheConfig == null){
             cacheConfig = new CacheConfig();
         }

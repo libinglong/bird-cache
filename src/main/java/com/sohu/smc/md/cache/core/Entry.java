@@ -8,7 +8,7 @@ import lombok.Data;
  * @since 2020/9/30
  */
 @Data
-public class BatchEntry {
+public class Entry {
 
     private Object keyObj;
     private Object originObj;
