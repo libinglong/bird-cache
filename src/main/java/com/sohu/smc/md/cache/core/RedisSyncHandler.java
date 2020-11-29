@@ -48,12 +48,13 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .clear()
                 .timeout(Duration.of(10, ChronoUnit.MILLIS))
-                .doOnError(throwable -> {
+                .onErrorResume(throwable -> {
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Clear)
                             .build();
                     primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op);
+                    return Mono.empty();
                 });
     }
 
@@ -62,13 +63,14 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
                 .timeout(Duration.of(10, ChronoUnit.MILLIS))
-                .doOnError(throwable -> {
+                .onErrorResume(throwable -> {
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Evict)
                             .key(key)
                             .build();
                     primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op);
+                    return Mono.empty();
                 });
     }
 
@@ -77,7 +79,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
                 .timeout(Duration.of(10, ChronoUnit.MILLIS))
-                .doOnError(throwable -> {
+                .onErrorResume(throwable -> {
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Put)
@@ -85,6 +87,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .value(value)
                             .build();
                     primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op);
+                    return Mono.empty();
                 });
     }
 

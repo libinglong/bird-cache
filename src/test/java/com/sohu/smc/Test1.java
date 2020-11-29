@@ -26,7 +26,7 @@ public class Test1 {
 
     private CountDownLatch latch = new CountDownLatch(1);
 
-    @Test
+//    @Test
     public void fun() throws InterruptedException {
         CompletableFuture<String> stringCompletableFuture = CompletableFuture.supplyAsync(() -> {
             try {
