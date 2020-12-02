@@ -8,6 +8,7 @@ import com.sohu.smc.md.cache.util.RedisClientUtils;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import io.lettuce.core.resource.ClientResources;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 import reactor.core.publisher.Flux;
@@ -21,7 +22,12 @@ import java.time.temporal.ChronoUnit;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/11/27
  */
+@Slf4j
 public class RedisSyncHandler implements SyncHandler, InitializingBean {
+
+    private final Duration timeInterval = Duration.of(200, ChronoUnit.MILLIS);
+    //make timeout a little less than timeInterval
+    private final Duration timeout = Duration.of(180, ChronoUnit.MILLIS);
 
     private final RedisCacheManager secondaryRedisCacheManager;
     private final RedisReactiveCommands<Object, Object> primaryReactive;
@@ -46,7 +52,9 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     public Mono<Void> clearSync(String cacheSpaceName) {
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .clear()
+                .timeout(timeout)
                 .onErrorResume(throwable -> {
+                    log.error("error", throwable);
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Clear)
@@ -60,7 +68,9 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     public Mono<Void> evictSync(String cacheSpaceName, Object key) {
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
+                .timeout(timeout)
                 .onErrorResume(throwable -> {
+                    log.error("error", throwable);
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Evict)
@@ -75,7 +85,9 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     public Mono<Void> putSync(String cacheSpaceName, Object key, Object value) {
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
+                .timeout(timeout)
                 .onErrorResume(throwable -> {
+                    log.error("error", throwable);
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Put)
@@ -90,9 +102,6 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         secondaryRedisCacheManager.afterPropertiesSet();
-        int timeInterval = 200;
-        //make timeout a little less than timeInterval
-        int timeout = 180;
         Mono<Long> syncOpMono = secondaryReactive.ping()
                 .then(primaryReactive.srandmember(ERROR_SYNC_EVENT))
                 .flatMap(o -> {
@@ -100,9 +109,9 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                     return secondaryRedisCacheManager.getCache(syncOp.getCacheSpaceName()).delete(syncOp.getKey())
                             .then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp));
                 })
-                .timeout(Duration.of(timeout, ChronoUnit.MILLIS))
+                .timeout(timeout)
                 .onErrorResume(throwable -> Mono.empty());
-        Flux.interval(Duration.of(timeInterval, ChronoUnit.MILLIS))
+        Flux.interval(timeInterval)
                 .flatMap(aLong -> syncOpMono)
                 .subscribe();
     }
