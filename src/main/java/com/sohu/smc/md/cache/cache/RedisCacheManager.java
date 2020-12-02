@@ -5,7 +5,6 @@ import com.sohu.smc.md.cache.core.SyncHandler;
 import com.sohu.smc.md.cache.serializer.PbSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import com.sohu.smc.md.cache.util.RedisClientUtils;
-import io.lettuce.core.ClientOptions;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.resource.ClientResources;

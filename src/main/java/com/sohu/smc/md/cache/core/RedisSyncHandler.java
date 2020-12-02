@@ -6,7 +6,7 @@ import com.sohu.smc.md.cache.cache.SyncOp;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import com.sohu.smc.md.cache.util.RedisClientUtils;
 import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import io.lettuce.core.resource.ClientResources;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
@@ -16,8 +16,6 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
-import static com.sohu.smc.md.cache.util.CompletionStageUtils.wrap;
-
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
@@ -26,8 +24,8 @@ import static com.sohu.smc.md.cache.util.CompletionStageUtils.wrap;
 public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
     private final RedisCacheManager secondaryRedisCacheManager;
-    private final RedisAsyncCommands<Object, Object> primaryAsyncCommands;
-    private final RedisAsyncCommands<Object, Object> secondaryAsyncCommands;
+    private final RedisReactiveCommands<Object, Object> primaryReactive;
+    private final RedisReactiveCommands<Object, Object> secondaryReactive;
     private static final String ERROR_SYNC_EVENT = "ERROR_SYNC_EVENT";
 
     public RedisSyncHandler(RedisURI primaryRedisURI, ClientResources primaryClientResources, RedisURI secondaryRedisURI, ClientResources secondaryClientResources, Serializer serializer) {
@@ -35,12 +33,12 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
         Assert.notNull(primaryClientResources,"primaryClientResources can not be null");
         Assert.notNull(secondaryRedisURI,"secondaryRedisURI can not be null");
         Assert.notNull(secondaryClientResources,"secondaryClientResources can not be null");
-        primaryAsyncCommands = RedisClientUtils.initRedisClient(primaryRedisURI, primaryClientResources)
+        primaryReactive = RedisClientUtils.initRedisClient(primaryRedisURI, primaryClientResources)
                 .connect(new ObjectRedisCodec(serializer))
-                .async();
-        secondaryAsyncCommands = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources)
+                .reactive();
+        secondaryReactive = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources)
                 .connect(new ObjectRedisCodec(serializer))
-                .async();
+                .reactive();
         this.secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources);
     }
 
@@ -53,7 +51,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Clear)
                             .build();
-                    return Mono.fromCompletionStage(wrap(() -> primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op)))
+                    return primaryReactive.sadd(ERROR_SYNC_EVENT, op)
                             .then();
                 });
     }
@@ -68,7 +66,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .op(SyncOp.Op.Evict)
                             .key(key)
                             .build();
-                    return Mono.fromCompletionStage(wrap(() -> primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op)))
+                    return primaryReactive.sadd(ERROR_SYNC_EVENT, op)
                             .then();
                 });
     }
@@ -84,7 +82,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .key(key)
                             .value(value)
                             .build();
-                    return Mono.fromCompletionStage(wrap(() -> primaryAsyncCommands.sadd(ERROR_SYNC_EVENT, op)))
+                    return primaryReactive.sadd(ERROR_SYNC_EVENT, op)
                             .then();
                 });
     }
@@ -93,12 +91,12 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     public void afterPropertiesSet() throws Exception {
         secondaryRedisCacheManager.afterPropertiesSet();
         Flux.interval(Duration.of(200, ChronoUnit.MILLIS))
-                .flatMap(aLong -> Mono.fromCompletionStage(wrap(() -> secondaryAsyncCommands.ping())))
-                .then(Mono.fromCompletionStage(wrap(() -> primaryAsyncCommands.srandmember(ERROR_SYNC_EVENT))))
+                .flatMap(aLong -> secondaryReactive.ping())
+                .then(primaryReactive.srandmember(ERROR_SYNC_EVENT))
                 .flatMap(o -> {
                     SyncOp syncOp = (SyncOp) o;
                     return secondaryRedisCacheManager.getCache(syncOp.getCacheSpaceName()).delete(syncOp.getKey())
-                            .then(Mono.fromCompletionStage(wrap(() -> primaryAsyncCommands.srem(ERROR_SYNC_EVENT, syncOp))));
+                            .then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp));
                 })
                 .subscribe();
     }

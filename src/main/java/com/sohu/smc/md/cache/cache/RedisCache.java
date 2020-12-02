@@ -5,14 +5,12 @@ import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.Value;
 import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
-
-import static com.sohu.smc.md.cache.util.CompletionStageUtils.wrap;
 
 /**
  * @author binglongli217932
@@ -25,7 +23,7 @@ public class RedisCache implements Cache {
     private final String cacheSpaceName;
     private final String cacheSpaceVersionKey;
 
-    private final RedisAsyncCommands<Object, Object> asyncCommand;
+    private final RedisReactiveCommands<Object, Object> reactive;
     protected Serializer serializer;
 
     public RedisCache(String cacheSpaceName, RedisClient redisClient, CacheSpace cacheSpace, Serializer serializer) {
@@ -34,7 +32,7 @@ public class RedisCache implements Cache {
         this.serializer = serializer;
 
         StatefulRedisConnection<Object, Object> connect = redisClient.connect(new ObjectRedisCodec(serializer));
-        asyncCommand = connect.async();
+        reactive = connect.reactive();
         cacheSpaceVersionKey = "v:" + cacheSpaceName;
     }
 
@@ -46,21 +44,21 @@ public class RedisCache implements Cache {
     @Override
     public Mono<Void> expire(Object key, long milliseconds) {
         return processSpace(key)
-                .flatMap(o -> Mono.fromCompletionStage(wrap(() -> asyncCommand.pexpire(o, milliseconds))))
+                .flatMap(o -> reactive.pexpire(o, milliseconds))
                 .then();
     }
 
     @Override
     public Mono<Void> delete(Object key) {
         return processSpace(key)
-                .flatMap(o -> Mono.fromCompletionStage(wrap(() -> asyncCommand.del(o))))
+                .flatMap(reactive::del)
                 .then();
     }
 
     @Override
     public Mono<Void> set(Object key, Object val, long time) {
         return processSpace(key)
-                .flatMap(o -> Mono.fromCompletionStage(wrap(() -> asyncCommand.psetex(o, time, val))))
+                .flatMap(o -> reactive.psetex(o, time, val))
                 .then();
     }
 
@@ -74,13 +72,12 @@ public class RedisCache implements Cache {
     @Override
     public Mono<Object> get(Object key) {
         return processSpace(key)
-                .flatMap(o -> Mono.fromCompletionStage(wrap(() -> asyncCommand.get(o))));
+                .flatMap(reactive::get);
     }
 
     @Override
     public Mono<List<Object>> get(List<Object> key) {
-        return Mono.fromCompletionStage(wrap(() -> asyncCommand.mget(key.toArray())))
-                .flatMapMany(Flux::fromIterable)
+        return reactive.mget(key.toArray())
                 .map(Value::getValue)
                 .collectList();
     }

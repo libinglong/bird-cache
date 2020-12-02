@@ -1,15 +1,13 @@
 package com.sohu.smc.md.cache.cache;
 
 import io.lettuce.core.RedisClient;
-import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import io.lettuce.core.codec.StringCodec;
 import io.lettuce.core.pubsub.RedisPubSubAdapter;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import io.lettuce.core.pubsub.api.sync.RedisPubSubCommands;
 import org.springframework.util.ConcurrentReferenceHashMap;
 import reactor.core.publisher.Mono;
-
-import static com.sohu.smc.md.cache.util.CompletionStageUtils.wrap;
 
 /**
  * @author binglongli217932
@@ -18,11 +16,11 @@ import static com.sohu.smc.md.cache.util.CompletionStageUtils.wrap;
  */
 public class CacheSpaceImpl implements CacheSpace {
 
-    private final RedisAsyncCommands<String, String> stringAsyncCommand;
+    private final RedisReactiveCommands<String, String> reactive;
     private final ConcurrentReferenceHashMap<String, String> versionMap = new ConcurrentReferenceHashMap<>(256);
 
     public CacheSpaceImpl(RedisClient redisClient){
-        stringAsyncCommand = redisClient.connect(StringCodec.UTF8).async();
+        reactive = redisClient.connect(StringCodec.UTF8).reactive();
         StatefulRedisPubSubConnection<String, String> pubSubConnection = redisClient.connectPubSub(StringCodec.UTF8);
         pubSubConnection.addListener(new RedisPubSubAdapter<String, String>() {
             @Override
@@ -38,10 +36,10 @@ public class CacheSpaceImpl implements CacheSpace {
 
     @Override
     public Mono<Void> incrVersion(String cacheSpaceVersionKey) {
-        return Mono.fromCompletionStage(wrap(()-> stringAsyncCommand.incr(cacheSpaceVersionKey)))
+        return reactive.incr(cacheSpaceVersionKey)
                 //保证当前jvm的实时性,立刻remove
                 .doOnNext(aLong -> versionMap.remove(cacheSpaceVersionKey))
-                .then(Mono.fromCompletionStage(wrap(() -> stringAsyncCommand.publish(CACHE_SPACE_CHANGE_CHANNEL, cacheSpaceVersionKey))))
+                .then(reactive.publish(CACHE_SPACE_CHANGE_CHANNEL, cacheSpaceVersionKey))
                 .then();
     }
 
@@ -53,10 +51,10 @@ public class CacheSpaceImpl implements CacheSpace {
     }
 
     private Mono<String> doGetVersion(String cacheSpaceVersionKey) {
-        Mono<String> versionCache = Mono.fromCompletionStage(wrap(() -> stringAsyncCommand.get(cacheSpaceVersionKey)))
+        Mono<String> versionCache = reactive.get(cacheSpaceVersionKey)
                 .switchIfEmpty(Mono.just("0"))
                 .cache();
-        return versionCache.flatMap(version -> Mono.fromCompletionStage(wrap(() -> stringAsyncCommand.setnx(cacheSpaceVersionKey, version))))
+        return versionCache.flatMap(version -> reactive.setnx(cacheSpaceVersionKey, version))
                 .then(versionCache);
     }
 
