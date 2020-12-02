@@ -48,11 +48,11 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
     @Override
     public void afterPropertiesSet() {
         redisClient = RedisClientUtils.initRedisClient(redisURI, clientResources);
-        reactive = redisClient.connect(new ObjectRedisCodec(serializer))
-                .reactive();
         if (serializer == null){
             serializer = new PbSerializer();
         }
+        reactive = redisClient.connect(new ObjectRedisCodec(serializer))
+                .reactive();
         cacheSpace = new CacheSpaceImpl(redisClient);
     }
 
