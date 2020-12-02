@@ -1,5 +1,11 @@
 package com.sohu.smc;
 
+import com.sohu.smc.md.cache.cache.SyncOp;
+import org.junit.Test;
+import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -16,21 +22,48 @@ public class Test1 {
 
     private CountDownLatch latch = new CountDownLatch(1);
 
-//    @Test
+    @Test
     public void fun() throws InterruptedException {
-        CompletableFuture<String> stringCompletableFuture = CompletableFuture.supplyAsync(() -> {
-            try {
-                System.out.println(22234244314L);
-                Thread.sleep(3000L);
-                System.out.println(224314);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            return "sa";
-        });
-        Mono.fromFuture(stringCompletableFuture)
-                .timeout(Duration.of(300, ChronoUnit.MILLIS))
-                .subscribe(System.out::println);
+        Hooks.onOperatorDebug();
+        Flux.interval(Duration.of(10, ChronoUnit.MILLIS))
+                .map(aLong -> {
+                    System.out.println(aLong);
+                    return aLong;
+                })
+                .flatMap(aLong -> {
+                    CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        return "s";
+                    });
+                    return Mono.fromCompletionStage(future)
+                            .timeout(Duration.of(5, ChronoUnit.MILLIS))
+                            .onErrorResume(throwable -> Mono.empty());
+                })
+                .subscribe(new CoreSubscriber<String>() {
+                    @Override
+                    public void onSubscribe(Subscription s) {
+                        s.request(Long.MAX_VALUE);
+                    }
+
+                    @Override
+                    public void onNext(String s) {
+                        System.out.println("onNext");
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        System.out.println("onError");
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        System.out.println("onComplete");
+                    }
+                });
         latch.await();
     }
 

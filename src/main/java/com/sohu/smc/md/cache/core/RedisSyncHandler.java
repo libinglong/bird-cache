@@ -90,14 +90,20 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         secondaryRedisCacheManager.afterPropertiesSet();
-        Flux.interval(Duration.of(200, ChronoUnit.MILLIS))
-                .flatMap(aLong -> secondaryReactive.ping())
+        int timeInterval = 200;
+        //make timeout a little less than timeInterval
+        int timeout = 180;
+        Mono<Long> syncOpMono = secondaryReactive.ping()
                 .then(primaryReactive.srandmember(ERROR_SYNC_EVENT))
                 .flatMap(o -> {
                     SyncOp syncOp = (SyncOp) o;
                     return secondaryRedisCacheManager.getCache(syncOp.getCacheSpaceName()).delete(syncOp.getKey())
                             .then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp));
                 })
+                .timeout(Duration.of(timeout, ChronoUnit.MILLIS))
+                .onErrorResume(throwable -> Mono.empty());
+        Flux.interval(Duration.of(timeInterval, ChronoUnit.MILLIS))
+                .flatMap(aLong -> syncOpMono)
                 .subscribe();
     }
 }
