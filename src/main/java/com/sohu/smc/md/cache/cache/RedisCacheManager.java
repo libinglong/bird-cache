@@ -7,6 +7,7 @@ import com.sohu.smc.md.cache.serializer.Serializer;
 import com.sohu.smc.md.cache.util.RedisClientUtils;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
+import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
 import lombok.Setter;
@@ -26,6 +27,7 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
 
     private CacheSpace cacheSpace;
     private RedisClient redisClient;
+    private RedisReactiveCommands<Object, Object> reactive;
     private final RedisURI redisURI;
     private final ClientResources clientResources;
     private final Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
@@ -46,6 +48,8 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
     @Override
     public void afterPropertiesSet() {
         redisClient = RedisClientUtils.initRedisClient(redisURI, clientResources);
+        reactive = redisClient.connect(new ObjectRedisCodec(serializer))
+                .reactive();
         if (serializer == null){
             serializer = new PbSerializer();
         }
@@ -63,7 +67,7 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
     @Override
     public Cache getCache(String cacheSpaceName) {
         return cacheMap.computeIfAbsent(cacheSpaceName, cacheSpaceName1 ->
-                new RedisCache(cacheSpaceName1, redisClient, cacheSpace, serializer));
+                new RedisCache(cacheSpaceName1, reactive, cacheSpace, serializer));
     }
 
     @Override

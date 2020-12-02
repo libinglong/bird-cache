@@ -26,13 +26,11 @@ public class RedisCache implements Cache {
     private final RedisReactiveCommands<Object, Object> reactive;
     protected Serializer serializer;
 
-    public RedisCache(String cacheSpaceName, RedisClient redisClient, CacheSpace cacheSpace, Serializer serializer) {
+    public RedisCache(String cacheSpaceName, RedisReactiveCommands<Object, Object> reactive, CacheSpace cacheSpace, Serializer serializer) {
         this.cacheSpaceName = cacheSpaceName;
         this.cacheSpace = cacheSpace;
         this.serializer = serializer;
-
-        StatefulRedisConnection<Object, Object> connect = redisClient.connect(new ObjectRedisCodec(serializer));
-        reactive = connect.reactive();
+        this.reactive = reactive;
         cacheSpaceVersionKey = "v:" + cacheSpaceName;
     }
 
