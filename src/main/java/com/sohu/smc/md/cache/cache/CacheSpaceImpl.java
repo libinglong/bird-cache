@@ -7,10 +7,9 @@ import io.lettuce.core.pubsub.RedisPubSubAdapter;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import io.lettuce.core.pubsub.api.sync.RedisPubSubCommands;
 import org.springframework.util.ConcurrentReferenceHashMap;
-import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
 
-import java.util.Objects;
+import static com.sohu.smc.md.cache.util.CompletionStageUtils.wrap;
 
 /**
  * @author binglongli217932
@@ -39,11 +38,10 @@ public class CacheSpaceImpl implements CacheSpace {
 
     @Override
     public Mono<Void> incrVersion(String cacheSpaceVersionKey) {
-        return Mono.fromCompletionStage(stringAsyncCommand.incr(cacheSpaceVersionKey))
+        return Mono.fromCompletionStage(wrap(()-> stringAsyncCommand.incr(cacheSpaceVersionKey)))
                 //保证当前jvm的实时性,立刻remove
                 .doOnNext(aLong -> versionMap.remove(cacheSpaceVersionKey))
-                .then(Mono.fromCompletionStage(stringAsyncCommand
-                        .publish(CACHE_SPACE_CHANGE_CHANNEL, cacheSpaceVersionKey)))
+                .then(Mono.fromCompletionStage(wrap(() -> stringAsyncCommand.publish(CACHE_SPACE_CHANGE_CHANNEL, cacheSpaceVersionKey))))
                 .then();
     }
 
@@ -55,10 +53,10 @@ public class CacheSpaceImpl implements CacheSpace {
     }
 
     private Mono<String> doGetVersion(String cacheSpaceVersionKey) {
-        Mono<String> versionCache = Mono.fromCompletionStage(stringAsyncCommand.get(cacheSpaceVersionKey))
+        Mono<String> versionCache = Mono.fromCompletionStage(wrap(() -> stringAsyncCommand.get(cacheSpaceVersionKey)))
                 .switchIfEmpty(Mono.just("0"))
                 .cache();
-        return versionCache.flatMap(version -> Mono.fromCompletionStage(stringAsyncCommand.setnx(cacheSpaceVersionKey, version)))
+        return versionCache.flatMap(version -> Mono.fromCompletionStage(wrap(() -> stringAsyncCommand.setnx(cacheSpaceVersionKey, version))))
                 .then(versionCache);
     }
 

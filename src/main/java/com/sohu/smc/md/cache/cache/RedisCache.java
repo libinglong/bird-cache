@@ -12,6 +12,8 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.Map;
 
+import static com.sohu.smc.md.cache.util.CompletionStageUtils.wrap;
+
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
@@ -44,21 +46,21 @@ public class RedisCache implements Cache {
     @Override
     public Mono<Void> expire(Object key, long milliseconds) {
         return processSpace(key)
-                .flatMap(o -> Mono.fromCompletionStage(asyncCommand.pexpire(o, milliseconds)))
+                .flatMap(o -> Mono.fromCompletionStage(wrap(() -> asyncCommand.pexpire(o, milliseconds))))
                 .then();
     }
 
     @Override
     public Mono<Void> delete(Object key) {
         return processSpace(key)
-                .flatMap(o -> Mono.fromCompletionStage(asyncCommand.del(o)))
+                .flatMap(o -> Mono.fromCompletionStage(wrap(() -> asyncCommand.del(o))))
                 .then();
     }
 
     @Override
     public Mono<Void> set(Object key, Object val, long time) {
         return processSpace(key)
-                .flatMap(o -> Mono.fromCompletionStage(asyncCommand.psetex(o, time, val)))
+                .flatMap(o -> Mono.fromCompletionStage(wrap(() -> asyncCommand.psetex(o, time, val))))
                 .then();
     }
 
@@ -72,12 +74,12 @@ public class RedisCache implements Cache {
     @Override
     public Mono<Object> get(Object key) {
         return processSpace(key)
-                .flatMap(o -> Mono.fromCompletionStage(asyncCommand.get(o)));
+                .flatMap(o -> Mono.fromCompletionStage(wrap(() -> asyncCommand.get(o))));
     }
 
     @Override
     public Mono<List<Object>> get(List<Object> key) {
-        return Mono.fromCompletionStage(asyncCommand.mget(key.toArray()))
+        return Mono.fromCompletionStage(wrap(() -> asyncCommand.mget(key.toArray())))
                 .flatMapMany(Flux::fromIterable)
                 .map(Value::getValue)
                 .collectList();

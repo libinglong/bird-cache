@@ -24,8 +24,7 @@ public class RedisClientUtils {
             redisClient = RedisClient.create(clientResources, redisURI);
         }
         ClientOptions options = ClientOptions.builder()
-                .disconnectedBehavior(ClientOptions.DisconnectedBehavior.ACCEPT_COMMANDS)
-                .timeoutOptions(TimeoutOptions.enabled(Duration.of(3000, ChronoUnit.MILLIS)))
+                .disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS)
                 .build();
         redisClient.setOptions(options);
         return redisClient;

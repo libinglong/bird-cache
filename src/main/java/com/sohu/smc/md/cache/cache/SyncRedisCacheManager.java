@@ -6,7 +6,6 @@ import com.sohu.smc.md.cache.core.SyncHandler;
 import com.sohu.smc.md.cache.serializer.PbSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
 import org.springframework.beans.factory.InitializingBean;
@@ -25,7 +24,6 @@ public class SyncRedisCacheManager implements IRedisCacheManager, InitializingBe
     private final ClientResources secondaryClientResources;
     private final RedisURI primaryRedisURI;
     private final RedisURI secondaryRedisURI;
-    private RedisAsyncCommands<Object, Object> async;
     private SyncHandler syncHandler;
 
     private final RedisCacheManager primaryRedisCacheManager;
