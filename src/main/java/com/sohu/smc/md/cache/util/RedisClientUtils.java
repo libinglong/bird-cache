@@ -1,9 +1,6 @@
 package com.sohu.smc.md.cache.util;
 
-import io.lettuce.core.ClientOptions;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.TimeoutOptions;
+import io.lettuce.core.*;
 import io.lettuce.core.resource.ClientResources;
 
 import java.time.Duration;
@@ -27,10 +24,14 @@ public class RedisClientUtils {
                 .connectionTimeout()
                 .fixedTimeout(Duration.of(3000, ChronoUnit.MILLIS))
                 .build();
+        SocketOptions socketOptions = SocketOptions.builder()
+                .connectTimeout(Duration.of(3000, ChronoUnit.MILLIS))
+                .build();
         ClientOptions options = ClientOptions.builder()
                 .disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS)
                 .cancelCommandsOnReconnectFailure(true)
                 .timeoutOptions(timeoutOptions)
+                .socketOptions(socketOptions)
                 .build();
         redisClient.setOptions(options);
         return redisClient;
