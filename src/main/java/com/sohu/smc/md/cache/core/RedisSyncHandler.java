@@ -5,17 +5,21 @@ import com.sohu.smc.md.cache.cache.RedisCacheManager;
 import com.sohu.smc.md.cache.cache.SyncOp;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import com.sohu.smc.md.cache.util.RedisClientUtils;
+import io.lettuce.core.RedisChannelHandler;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisConnectionStateAdapter;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import io.lettuce.core.resource.ClientResources;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author binglongli217932
@@ -32,6 +36,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     private final RedisCacheManager secondaryRedisCacheManager;
     private final RedisReactiveCommands<Object, Object> primaryReactive;
     private final RedisReactiveCommands<Object, Object> secondaryReactive;
+    private final RedisClient secondaryRedisClient;
     private static final String ERROR_SYNC_EVENT = "ERROR_SYNC_EVENT";
 
     public RedisSyncHandler(RedisURI primaryRedisURI, ClientResources primaryClientResources, RedisURI secondaryRedisURI, ClientResources secondaryClientResources, Serializer serializer) {
@@ -42,7 +47,8 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
         primaryReactive = RedisClientUtils.initRedisClient(primaryRedisURI, primaryClientResources)
                 .connect(new ObjectRedisCodec(serializer))
                 .reactive();
-        secondaryReactive = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources)
+        secondaryRedisClient = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources);
+        secondaryReactive = secondaryRedisClient
                 .connect(new ObjectRedisCodec(serializer))
                 .reactive();
         this.secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources);
@@ -102,17 +108,23 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         secondaryRedisCacheManager.afterPropertiesSet();
-        Mono<Long> syncOpMono = secondaryReactive.ping()
-                .then(primaryReactive.srandmember(ERROR_SYNC_EVENT))
-                .flatMap(o -> {
-                    SyncOp syncOp = (SyncOp) o;
-                    return secondaryRedisCacheManager.getCache(syncOp.getCacheSpaceName()).delete(syncOp.getKey())
-                            .then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp));
-                })
-                .timeout(timeout)
-                .onErrorResume(throwable -> Mono.empty());
-        Flux.interval(timeInterval)
-                .flatMap(aLong -> syncOpMono)
-                .subscribe();
+        secondaryRedisClient.addListener(new RedisConnectionStateAdapter(){
+            @Override
+            public void onRedisConnected(RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
+                AtomicBoolean flag = new AtomicBoolean(true);
+                while (flag.get()){
+                    primaryReactive.srandmember(ERROR_SYNC_EVENT)
+                            .switchIfEmpty(Mono.fromRunnable(() -> flag.set(false)))
+                            .flatMap(o -> {
+                                SyncOp syncOp = (SyncOp) o;
+                                return secondaryRedisCacheManager.getCache(syncOp.getCacheSpaceName()).delete(syncOp.getKey())
+                                        .then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp));
+                            })
+                            .timeout(timeout)
+                            .onErrorResume(throwable -> Mono.empty())
+                            .subscribe();
+                }
+            }
+        });
     }
 }
