@@ -40,7 +40,7 @@ public class MdCacheableOp {
         return getCacheValue(key)
                 .map(ValueWrapper::get)
                 .switchIfEmpty(invocationContext.doInvoke())
-                .doOnNext(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()));
+                .flatMap(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()).then(Mono.just(o)));
     }
 
 }

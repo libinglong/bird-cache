@@ -91,7 +91,7 @@ public class MdBatchCacheOp {
                     return retKeyExpr.getValue(context);
                 })
                 .zipWith(Mono.justOrEmpty(entries))
-                .doOnNext(tuple -> {
+                .flatMap(tuple -> {
                     Map<Object, ?> map = tuple.getT1();
                     List<Entry> entries1 = tuple.getT2();
                     entries1.forEach(entry -> {
@@ -102,7 +102,7 @@ public class MdBatchCacheOp {
                     });
                     Map<Object, Object> kvs = entries1.stream()
                             .collect(Collectors.toMap(Entry::getKeyObj, entry -> entry.getValueWrapper().get()));
-                    cache.setKvs(kvs, cacheConfig.getDefaultExpireTime());
+                    return cache.setKvs(kvs, cacheConfig.getDefaultExpireTime());
                 })
                 .thenMany(Flux.fromIterable(entries))
                 .map(entry -> entry.getValueWrapper().get())
