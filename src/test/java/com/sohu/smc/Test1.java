@@ -1,9 +1,8 @@
 package com.sohu.smc;
 
-import com.sohu.smc.md.cache.cache.SyncOp;
 import org.junit.Test;
 import org.reactivestreams.Subscription;
-import reactor.core.CoreSubscriber;
+import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
@@ -26,44 +25,76 @@ public class Test1 {
     public void fun() throws InterruptedException {
         Hooks.onOperatorDebug();
         Flux.interval(Duration.of(10, ChronoUnit.MILLIS))
-                .map(aLong -> {
-                    System.out.println(aLong);
-                    return aLong;
-                })
+                .onBackpressureDrop()
                 .flatMap(aLong -> {
-                    CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
-                        try {
-                            Thread.sleep(1000);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        return "s";
-                    });
-                    return Mono.fromCompletionStage(future)
-                            .timeout(Duration.of(5, ChronoUnit.MILLIS))
-                            .onErrorResume(throwable -> Mono.empty());
-                })
-                .subscribe(new CoreSubscriber<String>() {
+                    System.out.println("map:" + aLong);
+                    return Mono.error(new RuntimeException("hehehhe"))
+                            .doOnError(throwable -> System.out.println("error1234"))
+                            .onErrorResume(throwable -> Mono.empty())
+                            ;
+                }, 4,7)
+//                .onErrorResume(throwable -> Mono.empty())
+                .subscribe(new BaseSubscriber<Object>() {
                     @Override
-                    public void onSubscribe(Subscription s) {
-                        s.request(Long.MAX_VALUE);
+                    protected void hookOnSubscribe(Subscription subscription) {
+                        request(1);
                     }
 
                     @Override
-                    public void onNext(String s) {
-                        System.out.println("onNext");
+                    protected void hookOnNext(Object value) {
+                        System.out.println("sub hookOnNext:" + value);
+                        request(1);
                     }
 
                     @Override
-                    public void onError(Throwable t) {
-                        System.out.println("onError");
+                    protected void hookOnError(Throwable throwable) {
+                        System.out.println("sub error");
+                        super.hookOnError(throwable);
                     }
 
                     @Override
-                    public void onComplete() {
-                        System.out.println("onComplete");
+                    protected void hookOnComplete() {
+                        System.out.println("sub complete");
+                        request(1);
                     }
                 });
+//                .map(aLong -> {
+//                    System.out.println(aLong);
+//                    return aLong;
+//                })
+//                .flatMap(aLong -> {
+//                    CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+//                        try {
+//                            Thread.sleep(1000);
+//                        } catch (InterruptedException e) {
+//                            e.printStackTrace();
+//                        }
+//                        return "s";
+//                    });
+//                    return Mono.fromCompletionStage(future)
+////                            .timeout(Duration.of(5, ChronoUnit.MILLIS))
+////                            .onErrorResume(throwable -> Mono.empty())
+//                            ;
+//                })
+//                .subscribe(new BaseSubscriber<Object>() {
+//                    @Override
+//                    protected void hookOnSubscribe(Subscription subscription) {
+//                        request(1);
+//                    }
+//
+//                    @Override
+//                    protected void hookOnNext(Object value) {
+//                        super.hookOnNext(value);
+//                        request(1);
+//                    }
+//                });
+        latch.await();
+    }
+
+
+//    @Test
+    public void j() throws InterruptedException {
+
         latch.await();
     }
 
