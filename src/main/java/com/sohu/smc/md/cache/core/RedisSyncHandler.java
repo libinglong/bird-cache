@@ -62,7 +62,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                 .clear()
                 .timeout(timeout)
                 .onErrorResume(throwable -> {
-                    log.error("error", throwable);
+                    log.debug("clear sync error,fallback to store in primary redis so that we can restore consistency in the future", throwable);
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(Clear)
@@ -81,7 +81,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                 .delete(key)
                 .timeout(timeout)
                 .onErrorResume(throwable -> {
-                    log.error("error", throwable);
+                    log.error("evict sync error,fallback to store in primary redis so that we can restore consistency in the future", throwable);
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Evict)
@@ -101,7 +101,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                 .delete(key)
                 .timeout(timeout)
                 .onErrorResume(throwable -> {
-                    log.error("error", throwable);
+                    log.error("put sync error,fallback to store in primary redis so that we can restore consistency in the future", throwable);
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Put)
