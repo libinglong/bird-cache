@@ -19,6 +19,8 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
+import static com.sohu.smc.md.cache.cache.SyncOp.Op.Clear;
+
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
@@ -53,6 +55,9 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
     @Override
     public Mono<Void> clearSync(String cacheSpaceName) {
+        if (log.isDebugEnabled()){
+            log.debug("cacheSpaceName={},clear sync", cacheSpaceName);
+        }
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .clear()
                 .timeout(timeout)
@@ -60,7 +65,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                     log.error("error", throwable);
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
-                            .op(SyncOp.Op.Clear)
+                            .op(Clear)
                             .build();
                     return primaryReactive.sadd(ERROR_SYNC_EVENT, op)
                             .then();
@@ -69,6 +74,9 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
     @Override
     public Mono<Void> evictSync(String cacheSpaceName, Object key) {
+        if (log.isDebugEnabled()){
+            log.debug("cacheSpaceName={},key={},evict sync", cacheSpaceName, key);
+        }
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
                 .timeout(timeout)
@@ -86,6 +94,9 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
     @Override
     public Mono<Void> putSync(String cacheSpaceName, Object key, Object value) {
+        if (log.isDebugEnabled()){
+            log.debug("cacheSpaceName={},key={},value={},put sync", cacheSpaceName, key, value);
+        }
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
                 .timeout(timeout)
@@ -105,26 +116,31 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         secondaryRedisCacheManager.afterPropertiesSet();
-        Flux<Long> syncOpFlux = secondaryReactive.ping()
+        Mono<Void> syncOpFlux = secondaryReactive.ping()
                 .thenMany(primaryReactive.srandmember(ERROR_SYNC_EVENT, count))
                 .flatMap(o -> {
                     SyncOp syncOp = (SyncOp) o;
-                    return secondaryRedisCacheManager.getCache(syncOp.getCacheSpaceName()).delete(syncOp.getKey())
+                    Cache cache = secondaryRedisCacheManager.getCache(syncOp.getCacheSpaceName());
+                    if (Clear.equals(syncOp.getOp())) {
+                        return cache.clear();
+                    }
+                    return cache.delete(syncOp.getKey())
                             .then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp))
                             .timeout(timeout);
                 })
-                .onErrorResume(throwable -> Mono.empty());
+                .onErrorResume(throwable -> Mono.empty())
+                .then();
         Flux.interval(timeInterval)
                 .onBackpressureDrop()
                 .flatMap(aLong -> syncOpFlux,1,1)
-                .subscribe(new BaseSubscriber<Long>() {
+                .subscribe(new BaseSubscriber<Void>() {
                     @Override
                     protected void hookOnSubscribe(Subscription subscription) {
                         request(1);
                     }
 
                     @Override
-                    protected void hookOnNext(Long value) {
+                    protected void hookOnNext(Void value) {
                         request(1);
                     }
 
