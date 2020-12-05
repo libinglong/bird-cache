@@ -120,6 +120,9 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                 .thenMany(primaryReactive.srandmember(ERROR_SYNC_EVENT, count))
                 .flatMap(o -> {
                     SyncOp syncOp = (SyncOp) o;
+                    if (log.isDebugEnabled()){
+                        log.debug("sync op={}",syncOp);
+                    }
                     Cache cache = secondaryRedisCacheManager.getCache(syncOp.getCacheSpaceName());
                     if (Clear.equals(syncOp.getOp())) {
                         return cache.clear();

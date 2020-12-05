@@ -2,6 +2,7 @@ package com.sohu.smc.md.cache.cache;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.ToString;
 
 /**
  * @author binglongli217932
@@ -10,6 +11,7 @@ import lombok.Getter;
  */
 @Builder
 @Getter
+@ToString
 public class SyncOp {
 
     private Op op;

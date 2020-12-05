@@ -92,9 +92,9 @@ public class Test1 {
     }
 
 
-//    @Test
+    @Test
     public void j() throws InterruptedException {
-
+        System.out.println("a" + null);
         latch.await();
     }
 
