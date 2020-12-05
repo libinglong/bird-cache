@@ -116,7 +116,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         secondaryRedisCacheManager.afterPropertiesSet();
-        Mono<Void> syncOpFlux = secondaryReactive.ping()
+        Flux<Object> syncOpFlux = secondaryReactive.ping()
                 .thenMany(primaryReactive.srandmember(ERROR_SYNC_EVENT, count))
                 .flatMap(o -> {
                     SyncOp syncOp = (SyncOp) o;
@@ -128,22 +128,21 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                         return cache.clear();
                     }
                     return cache.delete(syncOp.getKey())
-                            .then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp))
-                            .timeout(timeout);
+                            .then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp));
                 })
-                .onErrorResume(throwable -> Mono.empty())
-                .then();
+                // return a value so that we can trigger hookOnNext method
+                .onErrorResume(throwable -> Mono.just(1));
         Flux.interval(timeInterval)
                 .onBackpressureDrop()
                 .flatMap(aLong -> syncOpFlux,1,1)
-                .subscribe(new BaseSubscriber<Void>() {
+                .subscribe(new BaseSubscriber<Object>() {
                     @Override
                     protected void hookOnSubscribe(Subscription subscription) {
                         request(1);
                     }
 
                     @Override
-                    protected void hookOnNext(Void value) {
+                    protected void hookOnNext(Object value) {
                         request(1);
                     }
 
