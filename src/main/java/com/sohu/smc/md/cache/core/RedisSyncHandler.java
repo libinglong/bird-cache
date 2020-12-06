@@ -124,7 +124,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                 })
                 // return a value so that we can trigger hookOnNext method
                 .onErrorResume(throwable -> {
-                    log.debug("syncOpFlux error", throwable);
+                    log.debug("syncOpFlux error={}", throwable.getMessage());
                     return Mono.just(1);
                 });
         Flux.interval(timeInterval)
