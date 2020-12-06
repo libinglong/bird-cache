@@ -55,9 +55,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
     @Override
     public Mono<Void> clearSync(String cacheSpaceName) {
-        if (log.isDebugEnabled()){
-            log.debug("cacheSpaceName={},clear sync", cacheSpaceName);
-        }
+        log.debug("cacheSpaceName={},clear sync", cacheSpaceName);
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .clear()
                 .timeout(timeout)
@@ -74,14 +72,12 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
     @Override
     public Mono<Void> evictSync(String cacheSpaceName, Object key) {
-        if (log.isDebugEnabled()){
-            log.debug("cacheSpaceName={},key={},evict sync", cacheSpaceName, key);
-        }
+        log.debug("cacheSpaceName={},key={},evict sync", cacheSpaceName, key);
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
                 .timeout(timeout)
                 .onErrorResume(throwable -> {
-                    log.error("evict sync error,fallback to store in primary redis so that we can restore consistency in the future", throwable);
+                    log.debug("evict sync error,fallback to store in primary redis so that we can restore consistency in the future", throwable);
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Evict)
@@ -94,14 +90,12 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
     @Override
     public Mono<Void> putSync(String cacheSpaceName, Object key, Object value) {
-        if (log.isDebugEnabled()){
-            log.debug("cacheSpaceName={},key={},value={},put sync", cacheSpaceName, key, value);
-        }
+        log.debug("cacheSpaceName={},key={},value={},put sync", cacheSpaceName, key, value);
         return secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
                 .timeout(timeout)
                 .onErrorResume(throwable -> {
-                    log.error("put sync error,fallback to store in primary redis so that we can restore consistency in the future", throwable);
+                    log.debug("put sync error,fallback to store in primary redis so that we can restore consistency in the future", throwable);
                     SyncOp op = SyncOp.builder()
                             .cacheSpaceName(cacheSpaceName)
                             .op(SyncOp.Op.Put)
@@ -120,9 +114,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                 .thenMany(primaryReactive.srandmember(ERROR_SYNC_EVENT, count))
                 .flatMap(o -> {
                     SyncOp syncOp = (SyncOp) o;
-                    if (log.isDebugEnabled()){
-                        log.debug("sync op={}",syncOp);
-                    }
+                    log.debug("sync op={}",syncOp);
                     Cache cache = secondaryRedisCacheManager.getCache(syncOp.getCacheSpaceName());
                     if (Clear.equals(syncOp.getOp())) {
                         return cache.clear();
@@ -131,7 +123,10 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp));
                 })
                 // return a value so that we can trigger hookOnNext method
-                .onErrorResume(throwable -> Mono.just(1));
+                .onErrorResume(throwable -> {
+                    log.debug("syncOpFlux error", throwable);
+                    return Mono.just(1);
+                });
         Flux.interval(timeInterval)
                 .onBackpressureDrop()
                 .flatMap(aLong -> syncOpFlux,1,1)
