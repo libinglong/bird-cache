@@ -130,6 +130,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
         Flux.interval(timeInterval)
                 .onBackpressureDrop()
                 .flatMap(aLong -> syncOpFlux,1,1)
+                .onBackpressureDrop()
                 .subscribe(new BaseSubscriber<Object>() {
                     @Override
                     protected void hookOnSubscribe(Subscription subscription) {

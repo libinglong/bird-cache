@@ -18,12 +18,15 @@ import java.util.concurrent.CountDownLatch;
  * @since 2020/9/17
  */
 public class Test1 {
+    {
+        Hooks.onOperatorDebug();
+    }
 
     private CountDownLatch latch = new CountDownLatch(1);
 
 //    @Test
     public void fun() throws InterruptedException {
-        Hooks.onOperatorDebug();
+
         Flux.interval(Duration.of(10, ChronoUnit.MILLIS))
                 .onBackpressureDrop()
                 .flatMap(aLong -> {
@@ -94,7 +97,29 @@ public class Test1 {
 
 //    @Test
     public void j() throws InterruptedException {
-        System.out.println("a" + null);
+        Duration timeInterval = Duration.of(200, ChronoUnit.MILLIS);
+        Flux.interval(timeInterval)
+                .onBackpressureDrop()
+                .flatMap(aLong -> Mono.fromRunnable(() -> {
+                    try {
+                        System.out.println("a");
+                        Thread.sleep(3000L);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }),1,1)
+                .subscribe(new BaseSubscriber<Object>() {
+                    @Override
+                    protected void hookOnSubscribe(Subscription subscription) {
+                        request(1);
+                    }
+
+                    @Override
+                    protected void hookOnNext(Object value) {
+                        request(1);
+                    }
+
+                });
         latch.await();
     }
 
