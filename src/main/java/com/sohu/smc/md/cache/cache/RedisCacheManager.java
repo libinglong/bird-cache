@@ -15,6 +15,8 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
 import javax.annotation.PreDestroy;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -47,7 +49,7 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        redisClient = RedisClientUtils.initRedisClient(redisURI, clientResources);
+        redisClient = RedisClientUtils.initRedisClient(redisURI, clientResources, Duration.of(3000, ChronoUnit.MILLIS));
         if (serializer == null){
             serializer = new PbSerializer();
         }

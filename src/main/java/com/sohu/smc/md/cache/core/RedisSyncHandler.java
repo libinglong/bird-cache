@@ -44,10 +44,10 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
         Assert.notNull(primaryClientResources,"primaryClientResources can not be null");
         Assert.notNull(secondaryRedisURI,"secondaryRedisURI can not be null");
         Assert.notNull(secondaryClientResources,"secondaryClientResources can not be null");
-        primaryReactive = RedisClientUtils.initRedisClient(primaryRedisURI, primaryClientResources)
+        primaryReactive = RedisClientUtils.initRedisClient(primaryRedisURI, primaryClientResources, Duration.of(3000, ChronoUnit.MILLIS))
                 .connect(new ObjectRedisCodec(serializer))
                 .reactive();
-        secondaryReactive = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources)
+        secondaryReactive = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources, Duration.of(4000, ChronoUnit.MILLIS))
                 .connect(new ObjectRedisCodec(serializer))
                 .reactive();
         this.secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources);

@@ -13,7 +13,7 @@ import java.time.temporal.ChronoUnit;
  */
 public class RedisClientUtils {
 
-    public static RedisClient initRedisClient(RedisURI redisURI, ClientResources clientResources){
+    public static RedisClient initRedisClient(RedisURI redisURI, ClientResources clientResources, Duration commandTimeout){
         RedisClient redisClient;
         if (clientResources == null){
             redisClient = RedisClient.create(redisURI);
@@ -21,8 +21,7 @@ public class RedisClientUtils {
             redisClient = RedisClient.create(clientResources, redisURI);
         }
         TimeoutOptions timeoutOptions = TimeoutOptions.builder()
-                .connectionTimeout()
-                .fixedTimeout(Duration.of(3000, ChronoUnit.MILLIS))
+                .fixedTimeout(commandTimeout)
                 .build();
         SocketOptions socketOptions = SocketOptions.builder()
                 .connectTimeout(Duration.of(3000, ChronoUnit.MILLIS))
