@@ -74,28 +74,39 @@ public class MdBatchCacheOp {
                     Map<?, ?> map = tuple.getT1();
                     List<Entry> entries1 = tuple.getT2();
                     entries1.forEach(entry -> {
-                        entry.setValue(map.get(entry.getCachedKeyObj()));
+                        Object o = map.get(entry.getCachedKeyObj());
+                        if (o != null){
+                            entry.setValue(o);
+                        }
                         entry.setNeedCache(false);
                     });
                 });
         if (usingOtherDcWhenMissing){
             processCache = processCache
                     .thenMany(Flux.fromIterable(entries))
-                    .filter(entry -> entry.getValue() instanceof NullValue)
+                    .filter(entry -> entry.getValue() == null)
                     .map(Entry::getCachedKeyObj)
                     .collectList()
+                    .filter(objects -> !objects.isEmpty())
                     .flatMap(this::getSecondaryCacheMap)
                     .zipWith(Mono.justOrEmpty(entries))
                     .doOnNext(tuple -> {
                         Map<?, ?> map = tuple.getT1();
                         List<Entry> entries1 = tuple.getT2();
-                        entries1.forEach(entry -> entry.setValue(map.get(entry.getCachedKeyObj())));
+                        entries1.forEach(entry -> {
+                            Object o = map.get(entry.getCachedKeyObj());
+                            if (o != null){
+                                entry.setValue(o);
+                            }
+                        });
                     });
         }
         return processCache
                 .thenMany(Flux.fromIterable(entries))
+                .filter(entry -> entry.getValue() == null)
                 .map(Entry::getOriginKeyObj)
                 .collectList()
+                .filter(objects -> !objects.isEmpty())
                 .flatMap(objects -> {
                     invocationContext.getMethodInvocation()
                             .getArguments()[listIndex] = objects;
@@ -118,7 +129,9 @@ public class MdBatchCacheOp {
                     List<Entry> entries1 = tuple.getT2();
                     entries1.forEach(entry -> {
                         Object o = map.get(entry.getCachedKeyObj());
-                        entry.setValue(o);
+                        if (o != null){
+                            entry.setValue(o);
+                        }
                     });
                 })
                 .then(Mono.justOrEmpty(entries))
@@ -148,13 +161,13 @@ public class MdBatchCacheOp {
     private Mono<Map<Object, Object>> getCacheMap(List<Object> keys){
         return cache.get(keys)
                 .zipWith(Flux.fromIterable(keys))
-                .collectMap(Tuple2::getT1, Tuple2::getT2);
+                .collectMap(Tuple2::getT2, Tuple2::getT1);
     }
 
     private Mono<Map<Object, Object>> getSecondaryCacheMap(List<Object> keys){
         return secondaryCache.get(keys)
                 .zipWith(Flux.fromIterable(keys))
-                .collectMap(Tuple2::getT1, Tuple2::getT2);
+                .collectMap(Tuple2::getT2, Tuple2::getT1);
     }
 
 }

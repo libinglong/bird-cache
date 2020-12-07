@@ -74,7 +74,11 @@ public class RedisCache implements Cache {
 
     @Override
     public Flux<Object> get(List<Object> key) {
-        return reactive.mget(key.toArray())
+        return Flux.fromIterable(key)
+                .flatMap(this::processSpace)
+                .collectList()
+                .map(List::toArray)
+                .flatMapMany(reactive::mget)
                 .map(this::processNullValue);
     }
 
