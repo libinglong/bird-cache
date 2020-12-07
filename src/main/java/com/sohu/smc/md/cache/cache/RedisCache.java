@@ -1,10 +1,9 @@
 package com.sohu.smc.md.cache.cache;
 
 import com.sohu.smc.md.cache.core.Cache;
+import com.sohu.smc.md.cache.core.NullValue;
 import com.sohu.smc.md.cache.serializer.Serializer;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.Value;
-import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.KeyValue;
 import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -74,10 +73,9 @@ public class RedisCache implements Cache {
     }
 
     @Override
-    public Mono<List<Object>> get(List<Object> key) {
+    public Flux<Object> get(List<Object> key) {
         return reactive.mget(key.toArray())
-                .map(Value::getValue)
-                .collectList();
+                .map(this::processNullValue);
     }
 
     @Override
@@ -88,6 +86,14 @@ public class RedisCache implements Cache {
     private Mono<Object> processSpace(Object key) {
         return cacheSpace.getVersion(cacheSpaceVersionKey)
                 .map(version -> new SpaceWrapper(cacheSpaceName + ":" + version, key));
+    }
+
+
+    private Object processNullValue(KeyValue<?,?> keyValue){
+        if (keyValue.hasValue()){
+            return keyValue.getValue();
+        }
+        return NullValue.NULL;
     }
 
 }

@@ -3,6 +3,7 @@ package com.sohu.smc.md.cache.cache;
 import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.core.SyncHandler;
 import com.sohu.smc.md.cache.serializer.PbSerializer;
+import com.sohu.smc.md.cache.serializer.ReactorSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import com.sohu.smc.md.cache.util.RedisClientUtils;
 import io.lettuce.core.RedisClient;
@@ -51,7 +52,7 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
     public void afterPropertiesSet() {
         redisClient = RedisClientUtils.initRedisClient(redisURI, clientResources, Duration.of(3000, ChronoUnit.MILLIS));
         if (serializer == null){
-            serializer = new PbSerializer();
+            serializer = new ReactorSerializer(new PbSerializer());
         }
         reactive = redisClient.connect(new ObjectRedisCodec(serializer))
                 .reactive();

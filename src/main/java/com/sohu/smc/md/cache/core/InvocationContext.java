@@ -45,11 +45,12 @@ public class InvocationContext {
         return opContextMap.computeIfAbsent(op, unused -> new OpContext());
     }
 
-    public Mono<?> doInvoke() {
+    public Mono<Object> doInvoke() {
         if (methodInvocation.getMethod()
                 .getReturnType()
                 .isAssignableFrom(Mono.class)) {
-            return (Mono<?>) call();
+            //noinspection unchecked
+            return (Mono<Object>) call();
         } else if (methodInvocation.getMethod()
                 .getReturnType()
                 .isAssignableFrom(Flux.class)) {

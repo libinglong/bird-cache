@@ -15,6 +15,15 @@ public interface CacheManager {
     Cache getCache(String cacheSpaceName);
 
     /**
+     * 根据命名空间获取Cache
+     * @param cacheSpaceName cacheSpaceName
+     * @return cache
+     */
+    default Cache getSecondaryCache(String cacheSpaceName){
+        return null;
+    }
+
+    /**
      * 该缓存管理器是否需要与其他数据中心的缓存同步
      * @return true表示需要同步,否则不需要
      */

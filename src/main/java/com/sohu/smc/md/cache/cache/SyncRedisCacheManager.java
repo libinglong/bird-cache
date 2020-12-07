@@ -4,6 +4,7 @@ import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.core.RedisSyncHandler;
 import com.sohu.smc.md.cache.core.SyncHandler;
 import com.sohu.smc.md.cache.serializer.PbSerializer;
+import com.sohu.smc.md.cache.serializer.ReactorSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.resource.ClientResources;
@@ -19,7 +20,7 @@ import org.springframework.util.Assert;
 @SuppressWarnings("unused")
 public class SyncRedisCacheManager implements IRedisCacheManager, InitializingBean {
 
-    private final Serializer serializer = new PbSerializer();
+    private final Serializer serializer = new ReactorSerializer(new PbSerializer());
     private final ClientResources primaryClientResources;
     private final ClientResources secondaryClientResources;
     private final RedisURI primaryRedisURI;
@@ -61,6 +62,11 @@ public class SyncRedisCacheManager implements IRedisCacheManager, InitializingBe
     @Override
     public Cache getCache(String cacheSpaceName) {
         return primaryRedisCacheManager.getCache(cacheSpaceName);
+    }
+
+    @Override
+    public Cache getSecondaryCache(String cacheSpaceName) {
+        return secondaryRedisCacheManager.getCache(cacheSpaceName);
     }
 
     @Override

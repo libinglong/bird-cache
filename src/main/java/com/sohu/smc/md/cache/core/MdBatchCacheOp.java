@@ -27,17 +27,21 @@ public class MdBatchCacheOp {
     private final Expression retKeyExpr;
     private final Expression keyExpr;
     private final Cache cache;
+    private final Cache secondaryCache;
     private final CacheConfig cacheConfig;
     private final int listIndex;
+    private final boolean usingOtherDcWhenMissing;
 
-    public MdBatchCacheOp(MdBatchCache mdBatchCache, Cache cache, CacheConfig cacheConfig,
+    public MdBatchCacheOp(MdBatchCache mdBatchCache, Cache cache, Cache secondaryCache, CacheConfig cacheConfig,
                           SpelParseService spelParseService) {
         this.cache = cache;
+        this.secondaryCache = secondaryCache;
         this.cacheConfig = cacheConfig;
         this.keyExpr = spelParseService.getExpression(mdBatchCache.key());
-        this.listExpr = spelParseService.getExpression("p" + mdBatchCache.index());
+        this.listExpr = spelParseService.getExpression("#p" + mdBatchCache.index());
         this.retKeyExpr = spelParseService.getExpression(mdBatchCache.retKey());
         this.listIndex = mdBatchCache.index();
+        this.usingOtherDcWhenMissing = mdBatchCache.usingOtherDcWhenMissing();
     }
 
     public List<Entry> getEntries(MethodInvocation methodInvocation){
@@ -49,8 +53,8 @@ public class MdBatchCacheOp {
             ctx.setVariable("obj", o);
             Object keyObj = keyExpr.getValue(ctx);
             Entry entry = new Entry();
-            entry.setOriginObj(o);
-            entry.setKeyObj(keyObj);
+            entry.setOriginKeyObj(o);
+            entry.setCachedKeyObj(keyObj);
             entries.add(entry);
         }
         return entries;
@@ -60,23 +64,37 @@ public class MdBatchCacheOp {
     public Mono<List<Object>> processBatchCacheOp(InvocationContext invocationContext) {
         MethodInvocation methodInvocation = invocationContext.getMethodInvocation();
         List<Entry> entries = getEntries(methodInvocation);
-        return Mono.justOrEmpty(entries)
+        Mono<?> processCache = Mono.justOrEmpty(entries)
                 .flatMapMany(Flux::fromIterable)
-                .map(Entry::getKeyObj)
+                .map(Entry::getCachedKeyObj)
                 .collectList()
-                .flatMap(keys -> cache.get(keys)
-                        .flatMapMany(Flux::fromIterable)
-                        .zipWith(Flux.fromIterable(keys))
-                        .collectMap(Tuple2::getT1, Tuple2::getT2))
+                .flatMap(this::getCacheMap)
                 .zipWith(Mono.justOrEmpty(entries))
                 .doOnNext(tuple -> {
                     Map<?, ?> map = tuple.getT1();
                     List<Entry> entries1 = tuple.getT2();
-                    entries1.forEach(entry -> entry.setValueWrapper(ValueWrapper.wrap(map.get(entry.getKeyObj()))));
-                })
+                    entries1.forEach(entry -> {
+                        entry.setValue(map.get(entry.getCachedKeyObj()));
+                        entry.setNeedCache(false);
+                    });
+                });
+        if (usingOtherDcWhenMissing){
+            processCache = processCache
+                    .thenMany(Flux.fromIterable(entries))
+                    .filter(entry -> entry.getValue() instanceof NullValue)
+                    .map(Entry::getCachedKeyObj)
+                    .collectList()
+                    .flatMap(this::getSecondaryCacheMap)
+                    .zipWith(Mono.justOrEmpty(entries))
+                    .doOnNext(tuple -> {
+                        Map<?, ?> map = tuple.getT1();
+                        List<Entry> entries1 = tuple.getT2();
+                        entries1.forEach(entry -> entry.setValue(map.get(entry.getCachedKeyObj())));
+                    });
+        }
+        return processCache
                 .thenMany(Flux.fromIterable(entries))
-                .filter(entry -> entry.getValueWrapper() == null)
-                .map(Entry::getOriginObj)
+                .map(Entry::getOriginKeyObj)
                 .collectList()
                 .flatMap(objects -> {
                     invocationContext.getMethodInvocation()
@@ -84,29 +102,59 @@ public class MdBatchCacheOp {
                     return invocationContext.doInvoke();
                 })
                 .map(o -> (List<?>)o)
+                .map(this::replaceNull)
                 .flatMapMany(Flux::fromIterable)
                 .collectMap(o -> {
+                    if (o instanceof NullValue){
+                        return ((NullValue) o).getKey();
+                    }
                     ParamEvaluationContext context = new ParamEvaluationContext(methodInvocation.getArguments());
                     context.setVariable("obj", o);
                     return retKeyExpr.getValue(context);
                 })
                 .zipWith(Mono.justOrEmpty(entries))
-                .flatMap(tuple -> {
+                .doOnNext(tuple -> {
                     Map<Object, ?> map = tuple.getT1();
                     List<Entry> entries1 = tuple.getT2();
                     entries1.forEach(entry -> {
-                        Object o = map.get(entry.getKeyObj());
-                        if (o != null){
-                            entry.setValueWrapper(ValueWrapper.wrap(o));
-                        }
+                        Object o = map.get(entry.getCachedKeyObj());
+                        entry.setValue(o);
                     });
+                })
+                .then(Mono.justOrEmpty(entries))
+                .flatMap(entries1 -> {
                     Map<Object, Object> kvs = entries1.stream()
-                            .collect(Collectors.toMap(Entry::getKeyObj, entry -> entry.getValueWrapper().get()));
+                            .filter(Entry::isNeedCache)
+                            .collect(Collectors.toMap(Entry::getCachedKeyObj, Entry::getValue));
                     return cache.setKvs(kvs, cacheConfig.getDefaultExpireTime());
                 })
                 .thenMany(Flux.fromIterable(entries))
-                .map(entry -> entry.getValueWrapper().get())
+                .map(Entry::getValue)
                 .collectList();
+    }
+
+    private List<Object> replaceNull(List<?> originalList){
+        List<Object> list = new ArrayList<>();
+        originalList.forEach(o -> {
+            if (o == null){
+                list.add(NullValue.NULL);
+            } else {
+                list.add(o);
+            }
+        });
+        return list;
+    }
+
+    private Mono<Map<Object, Object>> getCacheMap(List<Object> keys){
+        return cache.get(keys)
+                .zipWith(Flux.fromIterable(keys))
+                .collectMap(Tuple2::getT1, Tuple2::getT2);
+    }
+
+    private Mono<Map<Object, Object>> getSecondaryCacheMap(List<Object> keys){
+        return secondaryCache.get(keys)
+                .zipWith(Flux.fromIterable(keys))
+                .collectMap(Tuple2::getT1, Tuple2::getT2);
     }
 
 }

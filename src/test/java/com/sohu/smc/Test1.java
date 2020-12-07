@@ -1,6 +1,5 @@
 package com.sohu.smc;
 
-import org.junit.Test;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
@@ -9,8 +8,8 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @author binglongli217932
@@ -96,31 +95,11 @@ public class Test1 {
 
 
 //    @Test
-    public void j() throws InterruptedException {
-        Duration timeInterval = Duration.of(200, ChronoUnit.MILLIS);
-        Flux.interval(timeInterval)
-                .onBackpressureDrop()
-                .flatMap(aLong -> Mono.fromRunnable(() -> {
-                    try {
-                        System.out.println("a");
-                        Thread.sleep(3000L);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }),1,1)
-                .subscribe(new BaseSubscriber<Object>() {
-                    @Override
-                    protected void hookOnSubscribe(Subscription subscription) {
-                        request(1);
-                    }
-
-                    @Override
-                    protected void hookOnNext(Object value) {
-                        request(1);
-                    }
-
-                });
-        latch.await();
+    public void j() throws InterruptedException, ExecutionException {
+        Flux.empty()
+                .defaultIfEmpty("s")
+                .doOnNext(o -> System.out.println(o))
+                .subscribe();
     }
 
 

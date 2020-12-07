@@ -8,6 +8,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
@@ -67,6 +68,24 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
     }
 
     private Object unwrapIfNecessary(Mono<?> result, MethodInvocation methodInvocation) throws ExecutionException, InterruptedException {
+        result = result.flatMap(o -> {
+            if(o instanceof NullValue){
+                return Mono.empty();
+            } else if (o instanceof List){
+                List<?> wrapList = (List<?>) o;
+                List<Object> unWrapList = new ArrayList<>();
+                wrapList.forEach(o1 -> {
+                    if (o1 instanceof NullValue){
+                        unWrapList.add(null);
+                    } else {
+                        unWrapList.add(o1);
+                    }
+                });
+                return Mono.just(unWrapList);
+            } else {
+                return Mono.just(o);
+            }
+        });
         if (methodInvocation.getMethod()
                 .getReturnType()
                 .isAssignableFrom(Mono.class)) {

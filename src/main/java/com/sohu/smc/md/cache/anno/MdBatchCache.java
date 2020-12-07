@@ -34,4 +34,9 @@ public @interface MdBatchCache {
      * @return
      */
     String retKey();
+
+    /**
+     * 是否将其他机房作为次级数据来源
+     */
+    boolean usingOtherDcWhenMissing() default false;
 }

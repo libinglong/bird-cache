@@ -10,8 +10,9 @@ import lombok.Data;
 @Data
 public class Entry {
 
-    private Object keyObj;
-    private Object originObj;
-    private ValueWrapper valueWrapper;
+    private Object cachedKeyObj;
+    private Object originKeyObj;
+    private Object value;
+    private boolean needCache = true;
 
 }

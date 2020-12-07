@@ -15,32 +15,30 @@ public class MdCacheableOp {
 
     private final Expression keyExpr;
     private final Cache cache;
+    private final Cache secondaryCache;
     private final CacheConfig cacheConfig;
+    private final boolean usingOtherDcWhenMissing;
 
-    public MdCacheableOp(MdCacheable mdCacheable, Cache cache, CacheConfig cacheConfig,
+    public MdCacheableOp(MdCacheable mdCacheable, Cache cache, Cache secondaryCache, CacheConfig cacheConfig,
                          SpelParseService spelParseService) {
         this.cache = cache;
+        this.secondaryCache = secondaryCache;
         this.cacheConfig = cacheConfig;
         this.keyExpr = spelParseService.getExpression(mdCacheable.key());
-    }
-
-    /**
-     *
-     * @param key key
-     * @throws RuntimeException e
-     * @return 返回null表示缓存没有命中,如果命中,返回{@link NullValue#NULL}表示缓存的值为null
-     */
-    public Mono<ValueWrapper> getCacheValue(Object key) throws RuntimeException {
-        return cache.get(key)
-                .map(ValueWrapper::wrap);
+        this.usingOtherDcWhenMissing = mdCacheable.usingOtherDcWhenMissing();
     }
 
     public Mono<Object> processCacheableOp(InvocationContext invocationContext) {
         Object key = OpHelper.getKey(invocationContext, this, keyExpr);
-        return getCacheValue(key)
-                .map(ValueWrapper::get)
-                .switchIfEmpty(invocationContext.doInvoke())
-                .flatMap(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()).then(Mono.just(o)));
+        Mono<Object> fallback = invocationContext.doInvoke()
+                .defaultIfEmpty(NullValue.NULL);
+        if (usingOtherDcWhenMissing){
+            fallback = secondaryCache.get(key)
+                    .switchIfEmpty(fallback);
+        }
+        fallback = fallback.flatMap(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()).then(Mono.just(o)));
+        return cache.get(key)
+                .switchIfEmpty(fallback);
     }
 
 }

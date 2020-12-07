@@ -48,7 +48,8 @@ public class CacheOpParseService {
         String cacheSpaceName = method.getDeclaringClass()
                 .getName();
         return Optional.ofNullable(AnnotatedElementUtils.findMergedAnnotation(method, MdBatchCache.class))
-                .map(mdBatchCache -> new MdBatchCacheOp(mdBatchCache, cacheManager.getCache(cacheSpaceName), cacheConfig, spelParseService))
+                .map(mdBatchCache -> new MdBatchCacheOp(mdBatchCache, cacheManager.getCache(cacheSpaceName),
+                        cacheManager.getSecondaryCache(cacheSpaceName), cacheConfig, spelParseService))
                 .orElse(null);
     }
 
@@ -56,7 +57,8 @@ public class CacheOpParseService {
         String cacheSpaceName = method.getDeclaringClass()
                 .getName();
         return Optional.ofNullable(AnnotatedElementUtils.findMergedAnnotation(method, MdCacheable.class))
-                .map(mdCacheable -> new MdCacheableOp(mdCacheable, cacheManager.getCache(cacheSpaceName), cacheConfig, spelParseService))
+                .map(mdCacheable -> new MdCacheableOp(mdCacheable, cacheManager.getCache(cacheSpaceName),
+                        cacheManager.getSecondaryCache(cacheSpaceName), cacheConfig, spelParseService))
                 .orElse(null);
     }
 

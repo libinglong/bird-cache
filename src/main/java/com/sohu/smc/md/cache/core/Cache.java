@@ -1,5 +1,6 @@
 package com.sohu.smc.md.cache.core;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -54,7 +55,7 @@ public interface Cache {
     /**
      * 缓存查询
      * @param key the key of this cache
-     * @return 缓存的对象.如果缓存未命中,返回null;如果缓存的值为null,返回{@link NullValue#NULL},
+     * @return 缓存的对象.如果缓存未命中,不会有数据发射(相当于Mono.empty());如果缓存的值为null,发射{@link NullValue#NULL},
      */
     Mono<Object> get(Object key);
 
@@ -64,7 +65,7 @@ public interface Cache {
      * @param keys the keys of this cache
      * @return the list mapping to keys in order
      */
-    Mono<List<Object>> get(List<Object> keys);
+    Flux<Object> get(List<Object> keys);
 
     /**
      * 清空缓存
