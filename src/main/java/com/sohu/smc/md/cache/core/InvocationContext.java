@@ -46,18 +46,15 @@ public class InvocationContext {
     }
 
     public Mono<Object> doInvoke() {
-        if (methodInvocation.getMethod()
-                .getReturnType()
-                .isAssignableFrom(Mono.class)) {
+        if (Mono.class.isAssignableFrom(
+                methodInvocation.getMethod().getReturnType())) {
             //noinspection unchecked
             return (Mono<Object>) call();
-        } else if (methodInvocation.getMethod()
-                .getReturnType()
-                .isAssignableFrom(Flux.class)) {
+        } else if (Flux.class.isAssignableFrom(
+                methodInvocation.getMethod().getReturnType())) {
             return Mono.error(new RuntimeException("do not support Flux return type"));
-        } else if (methodInvocation.getMethod()
-                .getReturnType()
-                .isAssignableFrom(CompletionStage.class)) {
+        } else if (CompletionStage.class.isAssignableFrom(
+                methodInvocation.getMethod().getReturnType())) {
             return Mono.fromCompletionStage((CompletionStage<?>) call());
         }
         return Mono.fromCallable(this::call)
