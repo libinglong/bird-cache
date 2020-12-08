@@ -38,7 +38,7 @@ public class MdCachePutOp {
         if (!needSync){
             return set;
         }
-        return set.then(syncHandler.putSync(cache.getCacheSpaceName(), key, value));
+        return set.doOnTerminate(() -> syncHandler.putSync(cache.getCacheSpaceName(), key, value));
     }
 
 }

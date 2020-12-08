@@ -15,6 +15,8 @@ import org.springframework.util.Assert;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -33,6 +35,8 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     //make timeout a little less than timeInterval
     private final Duration timeout = Duration.of(180, ChronoUnit.MILLIS);
     private static final int count = 1000;
+
+    private static final Scheduler scheduler = Schedulers.newParallel("parallel-scheduler", 4);
 
     private final RedisCacheManager secondaryRedisCacheManager;
     private final RedisReactiveCommands<Object, Object> primaryReactive;
@@ -54,9 +58,9 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     }
 
     @Override
-    public Mono<Void> clearSync(String cacheSpaceName) {
+    public void clearSync(String cacheSpaceName) {
         log.debug("cacheSpaceName={},clear sync", cacheSpaceName);
-        return secondaryRedisCacheManager.getCache(cacheSpaceName)
+        secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .clear()
                 .timeout(timeout)
                 .onErrorResume(throwable -> {
@@ -67,13 +71,15 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .build();
                     return primaryReactive.sadd(ERROR_SYNC_EVENT, op)
                             .then();
-                });
+                })
+                .subscribeOn(scheduler)
+                .subscribe();
     }
 
     @Override
-    public Mono<Void> evictSync(String cacheSpaceName, Object key) {
+    public void evictSync(String cacheSpaceName, Object key) {
         log.debug("cacheSpaceName={},key={},evict sync", cacheSpaceName, key);
-        return secondaryRedisCacheManager.getCache(cacheSpaceName)
+        secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
                 .timeout(timeout)
                 .onErrorResume(throwable -> {
@@ -85,13 +91,15 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .build();
                     return primaryReactive.sadd(ERROR_SYNC_EVENT, op)
                             .then();
-                });
+                })
+                .subscribeOn(scheduler)
+                .subscribe();
     }
 
     @Override
-    public Mono<Void> putSync(String cacheSpaceName, Object key, Object value) {
+    public void putSync(String cacheSpaceName, Object key, Object value) {
         log.debug("cacheSpaceName={},key={},value={},put sync", cacheSpaceName, key, value);
-        return secondaryRedisCacheManager.getCache(cacheSpaceName)
+        secondaryRedisCacheManager.getCache(cacheSpaceName)
                 .delete(key)
                 .timeout(timeout)
                 .onErrorResume(throwable -> {
@@ -104,7 +112,9 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
                             .build();
                     return primaryReactive.sadd(ERROR_SYNC_EVENT, op)
                             .then();
-                });
+                })
+                .subscribeOn(scheduler)
+                .subscribe();
     }
 
     @Override

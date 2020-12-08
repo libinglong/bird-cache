@@ -24,7 +24,7 @@ public class MdCacheClearOp {
         if (!needSync){
             return clear;
         }
-        return clear.then(syncHandler.clearSync(cache.getCacheSpaceName()));
+        return clear.doOnTerminate(() -> syncHandler.clearSync(cache.getCacheSpaceName()));
     }
 
 }

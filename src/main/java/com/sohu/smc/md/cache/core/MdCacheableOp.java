@@ -3,6 +3,7 @@ package com.sohu.smc.md.cache.core;
 import com.sohu.smc.md.cache.anno.MdCacheable;
 import com.sohu.smc.md.cache.spring.CacheConfig;
 import com.sohu.smc.md.cache.spring.SpelParseService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.expression.Expression;
 import reactor.core.publisher.Mono;
 
@@ -11,6 +12,7 @@ import reactor.core.publisher.Mono;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/29
  */
+@Slf4j
 public class MdCacheableOp {
 
     private final Expression keyExpr;
@@ -30,15 +32,17 @@ public class MdCacheableOp {
 
     public Mono<Object> processCacheableOp(InvocationContext invocationContext) {
         Object key = OpHelper.getKey(invocationContext, this, keyExpr);
-        Mono<Object> fallback = invocationContext.doInvoke()
-                .defaultIfEmpty(NullValue.REAL_NULL);
+        Mono<Object> processCache = cache.get(key);
         if (usingOtherDcWhenMissing){
-            fallback = secondaryCache.get(key)
-                    .switchIfEmpty(fallback);
+            processCache = processCache
+                    .switchIfEmpty(Mono.fromRunnable(() -> log.debug("fallback to request other dc")))
+                    .then(secondaryCache.get(key));
         }
-        fallback = fallback.flatMap(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()).then(Mono.just(o)));
-        return cache.get(key)
-                .switchIfEmpty(fallback);
+        return processCache
+                .switchIfEmpty(Mono.fromRunnable(() -> log.debug("fallback the actual method invoke")))
+                .then(invocationContext.doInvoke())
+                .defaultIfEmpty(NullValue.REAL_NULL)
+                .flatMap(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()).then(Mono.just(o)));
     }
 
 }

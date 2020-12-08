@@ -38,7 +38,7 @@ public class MdCacheEvictOp {
         if (!needSync){
             return delete;
         }
-        return delete.then(syncHandler.evictSync(cache.getCacheSpaceName(), key));
+        return delete.doOnTerminate(() -> syncHandler.evictSync(cache.getCacheSpaceName(), key));
     }
 
 }

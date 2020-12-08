@@ -4,6 +4,7 @@ import com.sohu.smc.md.cache.anno.MdBatchCache;
 import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
 import com.sohu.smc.md.cache.spring.CacheConfig;
 import com.sohu.smc.md.cache.spring.SpelParseService;
+import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/9/29
  */
+@Slf4j
 public class MdBatchCacheOp {
 
     private final Expression listExpr;
@@ -89,6 +91,7 @@ public class MdBatchCacheOp {
                     .map(Entry::getCachedKeyObj)
                     .collectList()
                     .filter(objects -> !objects.isEmpty())
+                    .doOnNext(objects -> log.debug("fallback to request other dc"))
                     .flatMap(this::getSecondaryCacheMap)
                     .zipWith(Mono.justOrEmpty(entries))
                     .doOnNext(tuple -> {
@@ -108,6 +111,7 @@ public class MdBatchCacheOp {
                 .map(Entry::getOriginKeyObj)
                 .collectList()
                 .filter(objects -> !objects.isEmpty())
+                .doOnNext(o -> log.debug("fallback to actual method invoke"))
                 .flatMap(objects -> {
                     invocationContext.getMethodInvocation()
                             .getArguments()[listIndex] = objects;
