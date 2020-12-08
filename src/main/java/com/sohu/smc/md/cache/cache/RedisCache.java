@@ -97,7 +97,7 @@ public class RedisCache implements Cache {
         if (keyValue.hasValue()){
             return keyValue.getValue();
         }
-        return NullValue.NULL;
+        return NullValue.MISS_NULL;
     }
 
 }

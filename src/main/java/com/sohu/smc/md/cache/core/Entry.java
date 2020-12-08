@@ -13,6 +13,6 @@ public class Entry {
     private Object cachedKeyObj;
     private Object originKeyObj;
     private Object value;
-    private boolean needCache = true;
+    private boolean needCache = false;
 
 }

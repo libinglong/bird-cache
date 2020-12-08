@@ -31,7 +31,7 @@ public class MdCacheableOp {
     public Mono<Object> processCacheableOp(InvocationContext invocationContext) {
         Object key = OpHelper.getKey(invocationContext, this, keyExpr);
         Mono<Object> fallback = invocationContext.doInvoke()
-                .defaultIfEmpty(NullValue.NULL);
+                .defaultIfEmpty(NullValue.REAL_NULL);
         if (usingOtherDcWhenMissing){
             fallback = secondaryCache.get(key)
                     .switchIfEmpty(fallback);

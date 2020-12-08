@@ -75,10 +75,11 @@ public class MdBatchCacheOp {
                     List<Entry> entries1 = tuple.getT2();
                     entries1.forEach(entry -> {
                         Object o = map.get(entry.getCachedKeyObj());
-                        if (o != null){
+                        if (NullValue.MISS_NULL.equals(o)){
+                            entry.setNeedCache(true);
+                        } else {
                             entry.setValue(o);
                         }
-                        entry.setNeedCache(false);
                     });
                 });
         if (usingOtherDcWhenMissing){
@@ -95,7 +96,7 @@ public class MdBatchCacheOp {
                         List<Entry> entries1 = tuple.getT2();
                         entries1.forEach(entry -> {
                             Object o = map.get(entry.getCachedKeyObj());
-                            if (o != null){
+                            if (o !=null && !NullValue.MISS_NULL.equals(o)){
                                 entry.setValue(o);
                             }
                         });
@@ -117,7 +118,7 @@ public class MdBatchCacheOp {
                 .flatMapMany(Flux::fromIterable)
                 .collectMap(o -> {
                     if (o instanceof NullValue){
-                        return ((NullValue) o).getKey();
+                        return ((NullValue) o).get();
                     }
                     ParamEvaluationContext context = new ParamEvaluationContext(methodInvocation.getArguments());
                     context.setVariable("obj", o);
@@ -129,7 +130,7 @@ public class MdBatchCacheOp {
                     List<Entry> entries1 = tuple.getT2();
                     entries1.forEach(entry -> {
                         Object o = map.get(entry.getCachedKeyObj());
-                        if (o != null){
+                        if (o != null) {
                             entry.setValue(o);
                         }
                     });
@@ -150,7 +151,7 @@ public class MdBatchCacheOp {
         List<Object> list = new ArrayList<>();
         originalList.forEach(o -> {
             if (o == null){
-                list.add(NullValue.NULL);
+                list.add(NullValue.REAL_NULL);
             } else {
                 list.add(o);
             }
