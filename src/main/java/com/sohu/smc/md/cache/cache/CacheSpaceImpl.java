@@ -9,6 +9,8 @@ import io.lettuce.core.pubsub.api.sync.RedisPubSubCommands;
 import org.springframework.util.ConcurrentReferenceHashMap;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
@@ -51,10 +53,14 @@ public class CacheSpaceImpl implements CacheSpace {
     }
 
     private Mono<String> doGetVersion(String cacheSpaceVersionKey) {
+        AtomicBoolean needInitCacheSpaceVersionKey = new AtomicBoolean(true);
         Mono<String> versionCache = reactive.get(cacheSpaceVersionKey)
+                .doOnNext(s -> needInitCacheSpaceVersionKey.set(false))
                 .switchIfEmpty(Mono.just("0"))
                 .cache();
-        return versionCache.flatMap(version -> reactive.setnx(cacheSpaceVersionKey, version))
+        return versionCache
+                .filter(s -> needInitCacheSpaceVersionKey.get())
+                .flatMap(version -> reactive.setnx(cacheSpaceVersionKey, version))
                 .then(versionCache);
     }
 
