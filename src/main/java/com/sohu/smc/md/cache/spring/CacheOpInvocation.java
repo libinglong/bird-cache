@@ -86,17 +86,14 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
                 return Mono.just(o);
             }
         });
-        if (methodInvocation.getMethod()
-                .getReturnType()
-                .isAssignableFrom(Mono.class)) {
+        if (Mono.class.isAssignableFrom(
+                methodInvocation.getMethod().getReturnType())) {
             return result;
-        } else if (methodInvocation.getMethod()
-                .getReturnType()
-                .isAssignableFrom(Flux.class)) {
+        } else if (Flux.class.isAssignableFrom(
+                methodInvocation.getMethod().getReturnType())) {
             throw new RuntimeException("do not support Flux return type");
-        } else if (methodInvocation.getMethod()
-                .getReturnType()
-                .isAssignableFrom(CompletionStage.class)) {
+        } else if (CompletionStage.class.isAssignableFrom(
+                methodInvocation.getMethod().getReturnType())) {
             return result.toFuture();
         }
         return result.toFuture()
