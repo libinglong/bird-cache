@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.expression.Expression;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
@@ -32,17 +34,30 @@ public class MdCacheableOp {
 
     public Mono<Object> processCacheableOp(InvocationContext invocationContext) {
         Object key = OpHelper.getKey(invocationContext, this, keyExpr);
-        Mono<Object> processCache = cache.get(key);
+        AtomicBoolean needCache = new AtomicBoolean(true);
+        Mono<Object> processCache = cache.get(key)
+                .doOnNext(o -> needCache.set(false));
         if (usingOtherDcWhenMissing){
             processCache = processCache
-                    .switchIfEmpty(Mono.fromRunnable(() -> log.debug("fallback to request other dc")))
-                    .then(secondaryCache.get(key));
+                    .switchIfEmpty(getFromSecondaryCache(key));
         }
-        return processCache
-                .switchIfEmpty(Mono.fromRunnable(() -> log.debug("fallback the actual method invoke")))
+        Mono<Object> ret = processCache
+                .switchIfEmpty(doInvoke(invocationContext))
+                .cache();
+        return ret.filter(o -> needCache.get())
+                .flatMap(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()))
+                .then(ret);
+    }
+
+    private Mono<Object> getFromSecondaryCache(Object key){
+        return Mono.fromRunnable(() -> log.debug("fallback to request other dc"))
+                .then(secondaryCache.get(key));
+    }
+
+    private Mono<Object> doInvoke(InvocationContext invocationContext){
+        return Mono.fromRunnable(() -> log.debug("fallback the actual method invoke"))
                 .then(invocationContext.doInvoke())
-                .defaultIfEmpty(NullValue.REAL_NULL)
-                .flatMap(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()).then(Mono.just(o)));
+                .defaultIfEmpty(NullValue.REAL_NULL);
     }
 
 }
