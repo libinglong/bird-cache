@@ -120,22 +120,24 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         secondaryRedisCacheManager.afterPropertiesSet();
-        Flux<Object> syncOpFlux = secondaryReactive.ping()
+        Flux<Long> syncOpFlux = secondaryReactive.ping()
                 .thenMany(primaryReactive.srandmember(ERROR_SYNC_EVENT, count))
                 .flatMap(o -> {
                     SyncOp syncOp = (SyncOp) o;
-                    log.debug("sync op={}",syncOp);
+                    log.debug("sync op={}", syncOp);
                     Cache cache = secondaryRedisCacheManager.getCache(syncOp.getCacheSpaceName());
+                    Mono<Void> op;
                     if (Clear.equals(syncOp.getOp())) {
-                        return cache.clear();
+                        op = cache.clear();
+                    } else {
+                        op = cache.delete(syncOp.getKey());
                     }
-                    return cache.delete(syncOp.getKey())
-                            .then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp));
+                    return op.then(primaryReactive.srem(ERROR_SYNC_EVENT, syncOp));
                 })
                 // return a value so that we can trigger hookOnNext method
                 .onErrorResume(throwable -> {
                     log.debug("syncOpFlux error={}", throwable.getMessage());
-                    return Mono.just(1);
+                    return Mono.just(1L);
                 });
         Flux.interval(timeInterval)
                 .onBackpressureDrop()
