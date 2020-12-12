@@ -115,18 +115,26 @@ public class MdBatchCacheOp {
                 .flatMap(objects -> {
                     invocationContext.getMethodInvocation()
                             .getArguments()[listIndex] = objects;
-                    return invocationContext.doInvoke();
-                })
-                .map(o -> (List<?>)o)
-                .map(this::replaceNull)
-                .flatMapMany(Flux::fromIterable)
-                .collectMap(o -> {
-                    if (o instanceof NullValue){
-                        return ((NullValue) o).get();
-                    }
-                    ParamEvaluationContext context = new ParamEvaluationContext(methodInvocation.getArguments());
-                    context.setVariable("obj", o);
-                    return retKeyExpr.getValue(context);
+                    return invocationContext.doInvoke()
+                            .map(ret -> (List<?>) ret)
+                            .doOnNext(this::check)
+                            .flatMapMany(Flux::fromIterable)
+                            .collectMap(e -> {
+                                if (e instanceof NullValue) {
+                                    return ((NullValue) e).get();
+                                }
+                                ParamEvaluationContext context = new ParamEvaluationContext(methodInvocation.getArguments());
+                                context.setVariable("obj", e);
+                                return retKeyExpr.getValue(context);
+                            }, o -> (Object)o)
+                            .map(kvs -> {
+                                objects.forEach(o -> {
+                                    if (!kvs.containsKey(o)){
+                                        kvs.put(o, NullValue.REAL_NULL);
+                                    }
+                                });
+                                return kvs;
+                            });
                 })
                 .zipWith(Mono.justOrEmpty(entries))
                 .doOnNext(tuple -> {
@@ -148,19 +156,26 @@ public class MdBatchCacheOp {
                 })
                 .thenMany(Flux.fromIterable(entries))
                 .map(Entry::getValue)
-                .collectList();
+                .collectList()
+                .map(objects -> {
+                    List<Object> ret = new ArrayList();
+                    objects.forEach(o -> {
+                        if (o instanceof NullValue){
+                            ret.add(null);
+                        } else {
+                            ret.add(o);
+                        }
+                    });
+                    return ret;
+                });
     }
 
-    private List<Object> replaceNull(List<?> originalList){
-        List<Object> list = new ArrayList<>();
-        originalList.forEach(o -> {
+    private void check(List<?> list){
+        list.forEach(o -> {
             if (o == null){
-                list.add(NullValue.REAL_NULL);
-            } else {
-                list.add(o);
+                throw new RuntimeException("MdBatchCache don't support null element in return list");
             }
         });
-        return list;
     }
 
     private Mono<Map<Object, Object>> getCacheMap(List<Object> keys){

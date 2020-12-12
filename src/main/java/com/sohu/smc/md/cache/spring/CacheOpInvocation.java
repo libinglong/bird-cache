@@ -68,24 +68,6 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
     }
 
     private Object unwrapIfNecessary(Mono<?> result, MethodInvocation methodInvocation) throws ExecutionException, InterruptedException {
-        result = result.flatMap(o -> {
-            if(o instanceof NullValue){
-                return Mono.empty();
-            } else if (o instanceof List){
-                List<?> wrapList = (List<?>) o;
-                List<Object> unWrapList = new ArrayList<>();
-                wrapList.forEach(o1 -> {
-                    if (o1 instanceof NullValue){
-                        unWrapList.add(null);
-                    } else {
-                        unWrapList.add(o1);
-                    }
-                });
-                return Mono.just(unWrapList);
-            } else {
-                return Mono.just(o);
-            }
-        });
         if (Mono.class.isAssignableFrom(
                 methodInvocation.getMethod().getReturnType())) {
             return result;

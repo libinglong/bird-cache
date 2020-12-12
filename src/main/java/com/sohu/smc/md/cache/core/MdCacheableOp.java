@@ -46,7 +46,13 @@ public class MdCacheableOp {
                 .cache();
         return ret.filter(o -> needCache.get())
                 .flatMap(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()))
-                .then(ret);
+                .then(ret)
+                .flatMap(o -> {
+                    if (o instanceof NullValue){
+                        return Mono.empty();
+                    }
+                    return Mono.just(o);
+                });
     }
 
     private Mono<Object> getFromSecondaryCache(Object key){
