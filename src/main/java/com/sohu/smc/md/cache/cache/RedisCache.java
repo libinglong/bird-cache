@@ -2,8 +2,6 @@ package com.sohu.smc.md.cache.cache;
 
 import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.core.NullValue;
-import com.sohu.smc.md.cache.serializer.PbSerializer;
-import com.sohu.smc.md.cache.serializer.ReactorSerializer;
 import io.lettuce.core.KeyValue;
 import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import org.springframework.beans.factory.InitializingBean;
@@ -107,14 +105,14 @@ public class RedisCache implements Cache, InitializingBean {
     @Override
     public void afterPropertiesSet() {
         this.reactive = redisCacheManager.getRedisClient()
-                .connect(new ObjectRedisCodec(new ReactorSerializer(new PbSerializer())))
+                .connect(new ObjectRedisCodec(redisCacheManager.getSerializer()))
                 .reactive();
         CacheSpaceImpl cacheSpace = new CacheSpaceImpl(redisCacheManager, this);
         cacheSpace.afterPropertiesSet();
         this.cacheSpace = cacheSpace;
     }
 
-    public Mono<String> getVersion(){
+    public Mono<Object> getVersion(){
         return cacheSpace.getVersion();
     }
 }

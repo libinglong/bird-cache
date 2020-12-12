@@ -34,6 +34,7 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
     private final ClientResources clientResources;
     private final Map<String,RedisCache> cacheMap = new ConcurrentHashMap<>();
     @Setter
+    @Getter
     private Serializer serializer;
 
     public RedisCacheManager(RedisURI redisURI) {

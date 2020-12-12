@@ -11,10 +11,10 @@ import lombok.Getter;
 public class SpaceWrapper {
 
     String cacheSpaceName;
-    String version;
+    Object version;
     Object key;
 
-    public SpaceWrapper(String cacheSpaceName, String version, Object key) {
+    public SpaceWrapper(String cacheSpaceName, Object version, Object key) {
         this.cacheSpaceName = cacheSpaceName;
         this.version = version;
         this.key = key;

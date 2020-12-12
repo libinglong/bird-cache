@@ -2,7 +2,6 @@ package com.sohu.smc.md.cache.cache;
 
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.reactive.RedisReactiveCommands;
-import io.lettuce.core.codec.StringCodec;
 import io.lettuce.core.pubsub.RedisPubSubAdapter;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import io.lettuce.core.pubsub.api.sync.RedisPubSubCommands;
@@ -19,8 +18,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class CacheSpaceImpl implements CacheSpace, InitializingBean {
 
-    private RedisReactiveCommands<String, String> reactive;
-    private final ConcurrentReferenceHashMap<String, String> versionMap = new ConcurrentReferenceHashMap<>(256);
+    private RedisReactiveCommands<Object, Object> reactive;
+    private final ConcurrentReferenceHashMap<Object, Object> versionMap = new ConcurrentReferenceHashMap<>(256);
     private final RedisCacheManager redisCacheManager;
     private final RedisCache redisCache;
 
@@ -41,7 +40,7 @@ public class CacheSpaceImpl implements CacheSpace, InitializingBean {
     }
 
     @Override
-    public Mono<String> getVersion() {
+    public Mono<Object> getVersion() {
         return Mono.justOrEmpty(versionMap.get(getCacheSpaceVersionKey()))
                 .switchIfEmpty(doGetVersion())
                 .doOnNext(version -> versionMap.put(getCacheSpaceVersionKey(),version));
@@ -51,9 +50,9 @@ public class CacheSpaceImpl implements CacheSpace, InitializingBean {
         return "v:" + redisCache.getCacheSpaceName();
     }
 
-    private Mono<String> doGetVersion() {
+    private Mono<Object> doGetVersion() {
         AtomicBoolean needInitCacheSpaceVersionKey = new AtomicBoolean(true);
-        Mono<String> versionCache = reactive.get(getCacheSpaceVersionKey())
+        Mono<Object> versionCache = reactive.get(getCacheSpaceVersionKey())
                 .doOnNext(s -> needInitCacheSpaceVersionKey.set(false))
                 .switchIfEmpty(Mono.just("0"))
                 .cache();
@@ -66,16 +65,16 @@ public class CacheSpaceImpl implements CacheSpace, InitializingBean {
     @Override
     public void afterPropertiesSet() {
         RedisClient redisClient = redisCacheManager.getRedisClient();
-        reactive = redisClient.connect(StringCodec.UTF8)
+        reactive = redisClient.connect(new ObjectRedisCodec(redisCacheManager.getSerializer()))
                 .reactive();
-        StatefulRedisPubSubConnection<String, String> pubSubConnection = redisClient.connectPubSub(StringCodec.UTF8);
-        pubSubConnection.addListener(new RedisPubSubAdapter<String, String>() {
+        StatefulRedisPubSubConnection<Object, Object> pubSubConnection = redisClient.connectPubSub(new ObjectRedisCodec(redisCacheManager.getSerializer()));
+        pubSubConnection.addListener(new RedisPubSubAdapter<Object, Object>() {
             @Override
-            public void message(String channel, String cacheSpaceVersionKey) {
-                versionMap.remove(cacheSpaceVersionKey);
+            public void message(Object channel, Object message) {
+                versionMap.remove(message);
             }
         });
-        RedisPubSubCommands<String, String> sync = pubSubConnection.sync();
+        RedisPubSubCommands<Object, Object> sync = pubSubConnection.sync();
         sync.subscribe(CACHE_SPACE_CHANGE_CHANNEL);
     }
 }

@@ -18,6 +18,6 @@ public interface CacheSpace {
      * 获取命名空间前缀
      * @return
      */
-    Mono<String> getVersion();
+    Mono<Object> getVersion();
 
 }
