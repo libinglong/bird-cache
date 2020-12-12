@@ -2,9 +2,11 @@ package com.sohu.smc.md.cache.cache;
 
 import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.core.NullValue;
-import com.sohu.smc.md.cache.serializer.Serializer;
+import com.sohu.smc.md.cache.serializer.PbSerializer;
+import com.sohu.smc.md.cache.serializer.ReactorSerializer;
 import io.lettuce.core.KeyValue;
 import io.lettuce.core.api.reactive.RedisReactiveCommands;
+import org.springframework.beans.factory.InitializingBean;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -16,21 +18,17 @@ import java.util.Map;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/10
  */
-public class RedisCache implements Cache {
+public class RedisCache implements Cache, InitializingBean {
 
-    private final CacheSpace cacheSpace;
+    private CacheSpace cacheSpace;
     private final String cacheSpaceName;
-    private final String cacheSpaceVersionKey;
+    private final RedisCacheManager redisCacheManager;
 
-    private final RedisReactiveCommands<Object, Object> reactive;
-    protected Serializer serializer;
+    private RedisReactiveCommands<Object, Object> reactive;
 
-    public RedisCache(String cacheSpaceName, RedisReactiveCommands<Object, Object> reactive, CacheSpace cacheSpace, Serializer serializer) {
+    public RedisCache(String cacheSpaceName, RedisCacheManager redisCacheManager) {
         this.cacheSpaceName = cacheSpaceName;
-        this.cacheSpace = cacheSpace;
-        this.serializer = serializer;
-        this.reactive = reactive;
-        cacheSpaceVersionKey = "v:" + cacheSpaceName;
+        this.redisCacheManager = redisCacheManager;
     }
 
     @Override
@@ -84,7 +82,7 @@ public class RedisCache implements Cache {
 
     @Override
     public Mono<Void> clear() {
-        return cacheSpace.incrVersion(cacheSpaceVersionKey);
+        return cacheSpace.incrVersion();
     }
 
     @Override
@@ -94,8 +92,8 @@ public class RedisCache implements Cache {
     }
 
     private Mono<Object> processSpace(Object key) {
-        return cacheSpace.getVersion(cacheSpaceVersionKey)
-                .map(version -> new SpaceWrapper(cacheSpaceName + ":" + version, key));
+        return cacheSpace.getVersion()
+                .map(version -> new SpaceWrapper(cacheSpaceName, version, key));
     }
 
 
@@ -106,4 +104,13 @@ public class RedisCache implements Cache {
         return NullValue.MISS_NULL;
     }
 
+    @Override
+    public void afterPropertiesSet() {
+        this.reactive = redisCacheManager.getRedisClient()
+                .connect(new ObjectRedisCodec(new ReactorSerializer(new PbSerializer())))
+                .reactive();
+        CacheSpaceImpl cacheSpace = new CacheSpaceImpl(redisCacheManager, this);
+        cacheSpace.afterPropertiesSet();
+        this.cacheSpace = cacheSpace;
+    }
 }

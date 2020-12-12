@@ -8,9 +8,9 @@ import com.sohu.smc.md.cache.serializer.Serializer;
 import com.sohu.smc.md.cache.util.RedisClientUtils;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
+import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
@@ -28,9 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
 
-    private CacheSpace cacheSpace;
+    @Getter
     private RedisClient redisClient;
-    private RedisReactiveCommands<Object, Object> reactive;
     private final RedisURI redisURI;
     private final ClientResources clientResources;
     private final Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
@@ -54,9 +53,6 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
         if (serializer == null){
             serializer = new ReactorSerializer(new PbSerializer());
         }
-        reactive = redisClient.connect(new ObjectRedisCodec(serializer))
-                .reactive();
-        cacheSpace = new CacheSpaceImpl(redisClient);
     }
 
     @Override
@@ -69,8 +65,11 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
 
     @Override
     public Cache getCache(String cacheSpaceName) {
-        return cacheMap.computeIfAbsent(cacheSpaceName, cacheSpaceName1 ->
-                new RedisCache(cacheSpaceName1, reactive, cacheSpace, serializer));
+        return cacheMap.computeIfAbsent(cacheSpaceName, cacheSpaceName1 -> {
+            RedisCache redisCache = new RedisCache(cacheSpaceName1, this);
+            redisCache.afterPropertiesSet();
+            return redisCache;
+        });
     }
 
     @Override

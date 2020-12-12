@@ -11,15 +11,13 @@ public interface CacheSpace {
 
     /**
      * 增加缓存空间版本
-     * @param cacheSpaceVersionKey
      */
-    Mono<Void> incrVersion(String cacheSpaceVersionKey);
+    Mono<Void> incrVersion();
 
     /**
      * 获取命名空间前缀
-     * @param cacheSpaceVersionKey
      * @return
      */
-    Mono<String> getVersion(String cacheSpaceVersionKey);
+    Mono<String> getVersion();
 
 }
