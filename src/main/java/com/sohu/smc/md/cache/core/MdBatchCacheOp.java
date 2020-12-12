@@ -143,7 +143,7 @@ public class MdBatchCacheOp {
                 .flatMap(entries1 -> {
                     Map<Object, Object> kvs = entries1.stream()
                             .filter(Entry::isNeedCache)
-                            .collect(Collectors.toMap(Entry::getCachedKeyObj, Entry::getValue));
+                            .collect(Collectors.toMap(Entry::getCachedKeyObj, Entry::getValue, (o, o2) -> o));
                     return cache.setKvs(kvs, cacheConfig.getDefaultExpireTime());
                 })
                 .thenMany(Flux.fromIterable(entries))

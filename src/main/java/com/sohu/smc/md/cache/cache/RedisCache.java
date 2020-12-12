@@ -87,6 +87,12 @@ public class RedisCache implements Cache {
         return cacheSpace.incrVersion(cacheSpaceVersionKey);
     }
 
+    @Override
+    public Mono<Long> pttl(Object key){
+        return processSpace(key)
+                .flatMap(reactive::pttl);
+    }
+
     private Mono<Object> processSpace(Object key) {
         return cacheSpace.getVersion(cacheSpaceVersionKey)
                 .map(version -> new SpaceWrapper(cacheSpaceName + ":" + version, key));

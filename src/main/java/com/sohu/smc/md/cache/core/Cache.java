@@ -73,4 +73,5 @@ public interface Cache {
      */
     Mono<Void> clear();
 
+    Mono<Long> pttl(Object key);
 }
