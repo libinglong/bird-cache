@@ -32,7 +32,7 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
     private RedisClient redisClient;
     private final RedisURI redisURI;
     private final ClientResources clientResources;
-    private final Map<String,Cache> cacheMap = new ConcurrentHashMap<>();
+    private final Map<String,RedisCache> cacheMap = new ConcurrentHashMap<>();
     @Setter
     private Serializer serializer;
 
@@ -64,7 +64,7 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
     }
 
     @Override
-    public Cache getCache(String cacheSpaceName) {
+    public RedisCache getCache(String cacheSpaceName) {
         return cacheMap.computeIfAbsent(cacheSpaceName, cacheSpaceName1 -> {
             RedisCache redisCache = new RedisCache(cacheSpaceName1, this);
             redisCache.afterPropertiesSet();
