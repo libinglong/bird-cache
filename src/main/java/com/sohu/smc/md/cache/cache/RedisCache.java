@@ -113,4 +113,8 @@ public class RedisCache implements Cache, InitializingBean {
         cacheSpace.afterPropertiesSet();
         this.cacheSpace = cacheSpace;
     }
+
+    public Mono<String> getVersion(){
+        return cacheSpace.getVersion();
+    }
 }
