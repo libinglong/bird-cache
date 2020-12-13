@@ -37,6 +37,14 @@ public interface Cache {
 
     /**
      * 添加缓存
+     * @param key
+     * @param val
+     * @return
+     */
+    Mono<Void> set(Object key, Object val);
+
+    /**
+     * 添加缓存
      * @param key the key of this cache
      * @param val the value to be updated of this cache
      * @param milliseconds time to expire in ms
@@ -55,7 +63,7 @@ public interface Cache {
     /**
      * 缓存查询
      * @param key the key of this cache
-     * @return 缓存的对象.如果缓存未命中,不会有数据发射(相当于Mono.empty());如果缓存的值为null,发射{@link NullValue#NULL},
+     * @return 缓存的对象.如果缓存未命中,发射 {@link NullValue#MISS_NULL} 如果缓存的值为null,发射{@link NullValue}且{@link NullValue#isMissing} 为false,
      */
     Mono<Object> get(Object key);
 
@@ -63,7 +71,7 @@ public interface Cache {
      * 批量缓存查询需要实现此接口,来达到更好的性能
      * 参数和返回值顺序必须是对应的
      * @param keys the keys of this cache
-     * @return the list mapping to keys in order
+     * @return the list mapping to keys in order, 缓存的对象.如果缓存未命中,发射 {@link NullValue#MISS_NULL} 如果缓存的值为null,发射{@link NullValue}且{@link NullValue#isMissing} 为false,
      */
     Flux<Object> get(List<Object> keys);
 
@@ -73,5 +81,10 @@ public interface Cache {
      */
     Mono<Void> clear();
 
+    /**
+     * 查询缓存的过期时间
+     * @param key
+     * @return
+     */
     Mono<Long> pttl(Object key);
 }

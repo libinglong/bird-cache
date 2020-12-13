@@ -4,6 +4,7 @@ import org.springframework.util.Assert;
 
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.StringJoiner;
 
 /**
  * 这个类解决如下问题
@@ -62,5 +63,13 @@ public class NullValue {
     @Override
     public int hashCode() {
         return Objects.hash(key, isMissing);
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", NullValue.class.getSimpleName() + "[", "]")
+                .add("key=" + key)
+                .add("isMissing=" + isMissing)
+                .toString();
     }
 }

@@ -7,7 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.expression.Expression;
 import reactor.core.publisher.Mono;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 
 /**
  * @author binglongli217932
@@ -22,6 +23,7 @@ public class MdCacheableOp {
     private final Cache secondaryCache;
     private final CacheConfig cacheConfig;
     private final boolean usingOtherDcWhenMissing;
+    private final Duration timeout = Duration.of(200, ChronoUnit.MILLIS);
 
     public MdCacheableOp(MdCacheable mdCacheable, Cache cache, Cache secondaryCache, CacheConfig cacheConfig,
                          SpelParseService spelParseService) {
@@ -34,19 +36,55 @@ public class MdCacheableOp {
 
     public Mono<Object> processCacheableOp(InvocationContext invocationContext) {
         Object key = OpHelper.getKey(invocationContext, this, keyExpr);
-        AtomicBoolean needCache = new AtomicBoolean(true);
-        Mono<Object> processCache = cache.get(key)
-                .doOnNext(o -> needCache.set(false));
+        Entry oriEntry = new Entry();
+        Mono<?> processCache = Mono.just(oriEntry)
+                .doOnNext(entry -> entry.setCachedKeyObj(key))
+                .flatMap(entry -> cache.get(entry.getCachedKeyObj()))
+                .zipWith(Mono.just(oriEntry))
+                .doOnNext(tuple2 -> {
+                    Object v = tuple2.getT1();
+                    Entry entry = tuple2.getT2();
+                    entry.setValue(v);
+                    if (NullValue.MISS_NULL.equals(v)) {
+                        entry.setNeedCache(true);
+                    }
+                });
         if (usingOtherDcWhenMissing){
             processCache = processCache
-                    .switchIfEmpty(getFromSecondaryCache(key));
+                    .then(Mono.just(oriEntry))
+                    .filter(entry -> !NullValue.MISS_NULL.equals(entry.getValue()))
+                    .doOnNext(entry -> log.debug("fallback to request other dc"))
+                    .map(Entry::getCachedKeyObj)
+                    .flatMap(this::getFromSecondaryCache)
+                    .zipWith(Mono.just(oriEntry))
+                    .doOnNext(tuple2 -> {
+                        CacheValue t1 = tuple2.getT1();
+                        Entry entry = tuple2.getT2();
+                        entry.setValue(t1.getV());
+                        if (!NullValue.MISS_NULL.equals(t1.getV())){
+                            entry.setFromOtherDc(true);
+                            entry.setPttl(t1.getPttl());
+                        }
+                    });
         }
-        Mono<Object> ret = processCache
-                .switchIfEmpty(doInvoke(invocationContext))
-                .cache();
-        return ret.filter(o -> needCache.get())
-                .flatMap(o -> cache.set(key, o, cacheConfig.getDefaultExpireTime()))
-                .then(ret)
+        return processCache
+                .then(Mono.just(oriEntry))
+                .filter(entry -> !NullValue.MISS_NULL.equals(entry.getValue()))
+                .doOnNext(o -> log.debug("fallback the actual method invoke"))
+                .flatMap(entry -> doInvoke(invocationContext).doOnNext(entry::setValue))
+                .then(Mono.just(oriEntry))
+                .filter(Entry::isNeedCache)
+                .flatMap(entry -> {
+                    if (!entry.isFromOtherDc()){
+                        return cache.set(entry.getCachedKeyObj(), entry.getValue(), cacheConfig.getDefaultExpireTime());
+                    }
+                    if (entry.getPttl() > 0){
+                        return cache.set(entry.getCachedKeyObj(), entry.getValue(), entry.getPttl());
+                    }
+                    return cache.set(entry.getCachedKeyObj(), entry.getValue());
+                })
+                .then(Mono.just(oriEntry))
+                .map(Entry::getValue)
                 .flatMap(o -> {
                     if (o instanceof NullValue){
                         return Mono.empty();
@@ -55,14 +93,16 @@ public class MdCacheableOp {
                 });
     }
 
-    private Mono<Object> getFromSecondaryCache(Object key){
-        return Mono.fromRunnable(() -> log.debug("fallback to request other dc"))
-                .then(secondaryCache.get(key));
+    private Mono<CacheValue> getFromSecondaryCache(Object key){
+        return secondaryCache.get(key)
+                .zipWith(secondaryCache.pttl(key))
+                .map(tuple2 -> new CacheValue(tuple2.getT2(), tuple2.getT1()))
+                .timeout(timeout)
+                .onErrorResume(e -> Mono.empty());
     }
 
     private Mono<Object> doInvoke(InvocationContext invocationContext){
-        return Mono.fromRunnable(() -> log.debug("fallback the actual method invoke"))
-                .then(invocationContext.doInvoke())
+        return invocationContext.doInvoke()
                 .defaultIfEmpty(NullValue.REAL_NULL);
     }
 

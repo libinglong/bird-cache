@@ -49,6 +49,13 @@ public class RedisCache implements Cache, InitializingBean {
     }
 
     @Override
+    public Mono<Void> set(Object key, Object val) {
+        return processSpace(key)
+                .flatMap(o -> reactive.set(o, val))
+                .then();
+    }
+
+    @Override
     public Mono<Void> set(Object key, Object val, long time) {
         return processSpace(key)
                 .flatMap(o -> reactive.psetex(o, time, val))
@@ -65,7 +72,8 @@ public class RedisCache implements Cache, InitializingBean {
     @Override
     public Mono<Object> get(Object key) {
         return processSpace(key)
-                .flatMap(reactive::get);
+                .flatMap(reactive::get)
+                .defaultIfEmpty(NullValue.MISS_NULL);
     }
 
     @Override
