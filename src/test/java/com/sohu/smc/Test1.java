@@ -100,26 +100,9 @@ public class Test1 {
 
 
 
-    @Test
-//    @Prop(name = "a", value = "b")
-    @MethodCacheConfig
+//    @Test
     public void j() throws InterruptedException, ExecutionException, NoSuchMethodException {
-        CacheProperty config = new CacheProperty();
-        CacheProperty config1 = new CacheProperty();
-        config1.setDelayInvalidTime(1);
-        config1.setExpireTime(1);
-        BeanUtils.copyProperties(config, config1);
 
-
-        wrapper.convertIfNecessary();
-
-
-        Arrays.stream(wrapper.getPropertyDescriptors())
-                .forEach(propertyDescriptor -> {
-                    String name = propertyDescriptor.getName();
-                    Object propertyValue = wrapper.getPropertyValue(name);
-                    System.out.println();
-                });
 
 
         latch.await();
