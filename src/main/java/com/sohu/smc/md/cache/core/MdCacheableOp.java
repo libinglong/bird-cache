@@ -19,19 +19,22 @@ import java.time.temporal.ChronoUnit;
 public class MdCacheableOp {
 
     private final Expression keyExpr;
-    private final Cache cache;
-    private final Cache secondaryCache;
+    private final String cacheSpaceName;
+    private final CacheManager cacheManager;
+    private Cache cache;
+    private Cache secondaryCache;
     private final CacheProperty cacheProperty;
     private final boolean usingOtherDcWhenMissing;
     private final Duration timeout = Duration.of(200, ChronoUnit.MILLIS);
 
-    public MdCacheableOp(MdCacheable mdCacheable, Cache cache, Cache secondaryCache, CacheProperty cacheProperty,
+    public MdCacheableOp(MdCacheable mdCacheable, String cacheSpaceName, CacheManager cacheManager, CacheProperty cacheProperty,
                          SpelParseService spelParseService) {
-        this.cache = cache;
-        this.secondaryCache = secondaryCache;
+        this.cacheSpaceName = cacheSpaceName;
+        this.cacheManager = cacheManager;
         this.cacheProperty = cacheProperty;
         this.keyExpr = spelParseService.getExpression(mdCacheable.key());
         this.usingOtherDcWhenMissing = mdCacheable.usingOtherDcWhenMissing();
+        init();
     }
 
     public Mono<Object> processCacheableOp(InvocationContext invocationContext) {
@@ -106,4 +109,13 @@ public class MdCacheableOp {
                 .defaultIfEmpty(NullValue.REAL_NULL);
     }
 
+    public void init() {
+        this.cache = cacheManager.getCache(cacheSpaceName);
+        if (usingOtherDcWhenMissing && !(cacheManager instanceof SyncCacheManager)){
+            throw new RuntimeException("using SyncCacheManager when usingOtherDcWhenMissing is true");
+        }
+        if (cacheManager instanceof SyncCacheManager){
+            this.secondaryCache = ((SyncCacheManager)cacheManager).getSecondaryCache(cacheSpaceName);
+        }
+    }
 }

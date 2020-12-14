@@ -17,6 +17,7 @@ public class CacheProperty implements Cloneable {
 
     public static final long DEFAULT_EXPIRE_TIME = 14 * 24 * 60 * 60 * 1000L;
     public static final long DEFAULT_DELAY_INVALID_TIME = 200L;
+    public static final String DEFAULT_CACHE_MANAGER_BEAN_NAME = "cacheManager";
 
     /**
      * 过期时间 毫秒 0表示不过期
@@ -27,6 +28,11 @@ public class CacheProperty implements Cloneable {
      * 当缓存发生变更前,会将对应的key过期,然后执行方法,之后再删除key.延迟过期时间应该略大于方法执行时间,默认200ms
      */
     private long delayInvalidTime = DEFAULT_DELAY_INVALID_TIME;
+
+    /**
+     * com.sohu.smc.md.cache.core.CacheManager在spring容器中的bean的名称
+     */
+    private String cacheManager = DEFAULT_CACHE_MANAGER_BEAN_NAME;
 
     @Override
     public CacheProperty clone() {

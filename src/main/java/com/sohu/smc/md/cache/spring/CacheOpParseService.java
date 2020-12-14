@@ -4,6 +4,7 @@ import com.sohu.smc.md.cache.anno.*;
 import com.sohu.smc.md.cache.core.*;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationUtils;
 
@@ -20,13 +21,13 @@ import java.util.stream.Collectors;
  */
 public class CacheOpParseService {
 
-    private final CacheManager cacheManager;
-    private final CacheProperty defaultConfig;
+    private final CacheProperty globalCacheProperty;
     private final SpelParseService spelParseService;
+    private final ApplicationContext ctx;
 
-    public CacheOpParseService(CacheManager cacheManager, CacheProperty defaultConfig, SpelParseService spelParseService) {
-        this.cacheManager = cacheManager;
-        this.defaultConfig = defaultConfig;
+    public CacheOpParseService(ApplicationContext ctx, CacheProperty globalCacheProperty, SpelParseService spelParseService) {
+        this.ctx = ctx;
+        this.globalCacheProperty = globalCacheProperty;
         this.spelParseService = spelParseService;
     }
 
@@ -44,7 +45,11 @@ public class CacheOpParseService {
         String cacheSpaceName = method.getDeclaringClass()
                 .getName();
         return Optional.ofNullable(AnnotatedElementUtils.findMergedAnnotation(method, MdCacheClear.class))
-                .map(mdCacheClear -> new MdCacheClearOp(cacheManager.getCache(cacheSpaceName), cacheManager.needSync(), cacheManager.getSyncHandler()))
+                .map(mdCacheClear -> {
+                    CacheProperty cacheProperty = mergedCacheConfig(method, globalCacheProperty);
+                    CacheManager cacheManager = ctx.getBean(cacheProperty.getCacheManager(), CacheManager.class);
+                    return new MdCacheClearOp(cacheSpaceName, cacheManager);
+                })
                 .orElse(null);
     }
 
@@ -52,8 +57,11 @@ public class CacheOpParseService {
         String cacheSpaceName = method.getDeclaringClass()
                 .getName();
         return Optional.ofNullable(AnnotatedElementUtils.findMergedAnnotation(method, MdBatchCache.class))
-                .map(mdBatchCache -> new MdBatchCacheOp(mdBatchCache, cacheManager.getCache(cacheSpaceName),
-                        cacheManager.getSecondaryCache(cacheSpaceName), mergedCacheConfig(method, defaultConfig), spelParseService))
+                .map(mdBatchCache -> {
+                    CacheProperty cacheProperty = mergedCacheConfig(method, globalCacheProperty);
+                    CacheManager cacheManager = ctx.getBean(cacheProperty.getCacheManager(), CacheManager.class);
+                    return new MdBatchCacheOp(mdBatchCache, cacheSpaceName, cacheManager, cacheProperty, spelParseService);
+                })
                 .orElse(null);
     }
 
@@ -61,8 +69,11 @@ public class CacheOpParseService {
         String cacheSpaceName = method.getDeclaringClass()
                 .getName();
         return Optional.ofNullable(AnnotatedElementUtils.findMergedAnnotation(method, MdCacheable.class))
-                .map(mdCacheable -> new MdCacheableOp(mdCacheable, cacheManager.getCache(cacheSpaceName),
-                        cacheManager.getSecondaryCache(cacheSpaceName), mergedCacheConfig(method, defaultConfig), spelParseService))
+                .map(mdCacheable -> {
+                    CacheProperty cacheProperty = mergedCacheConfig(method, globalCacheProperty);
+                    CacheManager cacheManager = ctx.getBean(cacheProperty.getCacheManager(), CacheManager.class);
+                    return new MdCacheableOp(mdCacheable, cacheSpaceName, cacheManager, cacheProperty, spelParseService);
+                })
                 .orElse(null);
     }
 
@@ -71,8 +82,11 @@ public class CacheOpParseService {
                 .getName();
         return AnnotatedElementUtils.findMergedRepeatableAnnotations(method, MdCachePut.class)
                 .stream()
-                .map(mdCachePut -> new MdCachePutOp(mdCachePut, cacheManager.getCache(cacheSpaceName), mergedCacheConfig(method, defaultConfig),
-                        spelParseService, cacheManager.needSync(), cacheManager.getSyncHandler()))
+                .map(mdCachePut -> {
+                    CacheProperty cacheProperty = mergedCacheConfig(method, globalCacheProperty);
+                    CacheManager cacheManager = ctx.getBean(cacheProperty.getCacheManager(), CacheManager.class);
+                    return new MdCachePutOp(mdCachePut, cacheSpaceName, cacheManager, cacheProperty, spelParseService);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -81,17 +95,26 @@ public class CacheOpParseService {
                 .getName();
         return AnnotatedElementUtils.findMergedRepeatableAnnotations(method, MdCacheEvict.class)
                 .stream()
-                .map(mdCacheEvict -> new MdCacheEvictOp(mdCacheEvict, cacheManager.getCache(cacheSpaceName), mergedCacheConfig(method, defaultConfig),
-                        spelParseService, cacheManager.needSync(), cacheManager.getSyncHandler()))
+                .map(mdCacheEvict -> {
+                    CacheProperty cacheProperty = mergedCacheConfig(method, globalCacheProperty);
+                    CacheManager cacheManager = ctx.getBean(cacheProperty.getCacheManager(), CacheManager.class);
+                    return new MdCacheEvictOp(mdCacheEvict, cacheSpaceName, cacheManager, cacheProperty, spelParseService);
+                })
                 .collect(Collectors.toList());
     }
 
 
     private CacheProperty mergedCacheConfig(Method method, CacheProperty defaultCacheProperty){
         BeanWrapper retWrap = new BeanWrapperImpl(defaultCacheProperty.clone());
-        MethodProp config = AnnotationUtils.getAnnotation(method, MethodProp.class);
-        if (config != null){
-            Prop[] props = config.props();
+        MProp clsConfig = AnnotationUtils.getAnnotation(method.getDeclaringClass(), MProp.class);
+        if (clsConfig != null){
+            Prop[] props = clsConfig.props();
+            Arrays.stream(props)
+                    .forEach(prop -> retWrap.setPropertyValue(prop.name(),prop.value()));
+        }
+        MProp methodconfig = AnnotationUtils.getAnnotation(method, MProp.class);
+        if (methodconfig != null){
+            Prop[] props = methodconfig.props();
             Arrays.stream(props)
                     .forEach(prop -> retWrap.setPropertyValue(prop.name(),prop.value()));
         }

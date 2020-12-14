@@ -1,7 +1,6 @@
 package com.sohu.smc.md.cache.cache;
 
-import com.sohu.smc.md.cache.core.Cache;
-import com.sohu.smc.md.cache.core.SyncHandler;
+import com.sohu.smc.md.cache.core.CacheManager;
 import com.sohu.smc.md.cache.serializer.PbSerializer;
 import com.sohu.smc.md.cache.serializer.ReactorSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
@@ -16,6 +15,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
 import javax.annotation.PreDestroy;
+import java.io.Closeable;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/10/12
  */
-public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
+public class RedisCacheManager implements Closeable, CacheManager, InitializingBean {
 
     @Getter
     private RedisClient redisClient;
@@ -58,7 +58,7 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
 
     @Override
     @PreDestroy
-    public void shutdown(){
+    public void close(){
         if (redisClient != null){
             redisClient.shutdown();
         }
@@ -71,16 +71,6 @@ public class RedisCacheManager implements IRedisCacheManager, InitializingBean {
             redisCache.afterPropertiesSet();
             return redisCache;
         });
-    }
-
-    @Override
-    public boolean needSync() {
-        return false;
-    }
-
-    @Override
-    public SyncHandler getSyncHandler() {
-        return null;
     }
 
 }

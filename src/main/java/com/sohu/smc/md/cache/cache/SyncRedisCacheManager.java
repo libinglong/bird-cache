@@ -2,6 +2,7 @@ package com.sohu.smc.md.cache.cache;
 
 import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.core.RedisSyncHandler;
+import com.sohu.smc.md.cache.core.SyncCacheManager;
 import com.sohu.smc.md.cache.core.SyncHandler;
 import com.sohu.smc.md.cache.serializer.PbSerializer;
 import com.sohu.smc.md.cache.serializer.ReactorSerializer;
@@ -12,13 +13,15 @@ import io.lettuce.core.resource.DefaultClientResources;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
+import java.io.Closeable;
+
 /**
  * @author binglongli217932
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/11/26
  */
 @SuppressWarnings("unused")
-public class SyncRedisCacheManager implements IRedisCacheManager, InitializingBean {
+public class SyncRedisCacheManager implements Closeable, SyncCacheManager, InitializingBean {
 
     private final Serializer serializer = new ReactorSerializer(new PbSerializer());
     private final ClientResources primaryClientResources;
@@ -70,18 +73,13 @@ public class SyncRedisCacheManager implements IRedisCacheManager, InitializingBe
     }
 
     @Override
-    public boolean needSync() {
-        return true;
-    }
-
-    @Override
     public SyncHandler getSyncHandler() {
         return syncHandler;
     }
 
     @Override
-    public void shutdown() {
-        primaryRedisCacheManager.shutdown();
-        secondaryRedisCacheManager.shutdown();
+    public void close() {
+        primaryRedisCacheManager.close();
+        secondaryRedisCacheManager.close();
     }
 }

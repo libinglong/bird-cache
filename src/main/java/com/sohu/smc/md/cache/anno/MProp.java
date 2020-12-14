@@ -9,11 +9,11 @@ import java.lang.annotation.*;
  * <a href="mailto:libinglong9@gmail.com">libinglong:libinglong9@gmail.com</a>
  * @since 2020/12/13
  */
-@Target({ElementType.METHOD})
+@Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface MethodProp {
+public @interface MProp {
 
     /**
      * 被声明的项目在执行时会覆盖{@link CacheProperty}中的值

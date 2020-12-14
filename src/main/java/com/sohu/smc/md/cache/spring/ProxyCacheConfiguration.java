@@ -1,10 +1,12 @@
 package com.sohu.smc.md.cache.spring;
 
 import com.sohu.smc.md.cache.anno.EnableMdCaching;
-import com.sohu.smc.md.cache.core.CacheManager;
 import org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportAware;
@@ -17,15 +19,14 @@ import org.springframework.core.type.AnnotationMetadata;
  * @since 2020/9/7
  */
 @Configuration
-public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
+public class ProxyCacheConfiguration implements ImportAware, InitializingBean, ApplicationContextAware {
 
     private AnnotationAttributes enableMdCaching;
 
     @Autowired(required = false)
-    private CacheProperty cacheProperty;
+    private CacheProperty globalCacheProperty;
 
-    @Autowired
-    private CacheManager cacheManager;
+    private ApplicationContext ctx;
 
     @Bean
     public DefaultBeanFactoryPointcutAdvisor cacheAdvisor(CacheOpInvocation cacheOpInvocation) {
@@ -39,7 +40,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Bean
     public CacheOpInvocation cacheOpInvocation() {
-        return new CacheOpInvocation(cacheOpParseService(), cacheProperty);
+        return new CacheOpInvocation(cacheOpParseService(), globalCacheProperty);
     }
 
     @Bean
@@ -49,7 +50,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Bean
     public CacheOpParseService cacheOpParseService(){
-        return new CacheOpParseService(cacheManager, cacheProperty, spelParseService());
+        return new CacheOpParseService(ctx, globalCacheProperty, spelParseService());
     }
 
     @Override
@@ -65,8 +66,13 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        if (cacheProperty == null){
-            cacheProperty = new CacheProperty();
+        if (globalCacheProperty == null){
+            globalCacheProperty = new CacheProperty();
         }
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.ctx = applicationContext;
     }
 }

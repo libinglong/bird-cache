@@ -9,22 +9,27 @@ import reactor.core.publisher.Mono;
  */
 public class MdCacheClearOp {
 
-    private final Cache cache;
-    private final SyncHandler syncHandler;
-    private final boolean needSync;
+    private final String cacheSpaceName;
+    private final CacheManager cacheManager;
+    private Cache cache;
 
-    public MdCacheClearOp(Cache cache, boolean needSync, SyncHandler syncHandler) {
-        this.cache = cache;
-        this.syncHandler = syncHandler;
-        this.needSync = needSync;
+    public MdCacheClearOp(String cacheSpaceName, CacheManager cacheManager) {
+        this.cacheSpaceName = cacheSpaceName;
+        this.cacheManager = cacheManager;
+        init();
+    }
+
+    private void init() {
+        this.cache = cacheManager.getCache(cacheSpaceName);
     }
 
     public Mono<Void> clear(){
         Mono<Void> clear = cache.clear();
-        if (!needSync){
-            return clear;
+        if (cacheManager instanceof SyncCacheManager){
+            SyncHandler syncHandler = ((SyncCacheManager) cacheManager).getSyncHandler();
+            return clear.doOnTerminate(() -> syncHandler.clearSync(cache.getCacheSpaceName()));
         }
-        return clear.doOnTerminate(() -> syncHandler.clearSync(cache.getCacheSpaceName()));
+        return clear;
     }
 
 }

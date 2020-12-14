@@ -29,23 +29,36 @@ public class MdBatchCacheOp {
     private final Expression listExpr;
     private final Expression retKeyExpr;
     private final Expression keyExpr;
-    private final Cache cache;
-    private final Cache secondaryCache;
+    private Cache cache;
+    private Cache secondaryCache;
+    private final String cacheSpaceName;
+    private final CacheManager cacheManager;
     private final CacheProperty cacheProperty;
     private final int listIndex;
     private final boolean usingOtherDcWhenMissing;
     private final Duration timeout = Duration.of(200, ChronoUnit.MILLIS);
 
-    public MdBatchCacheOp(MdBatchCache mdBatchCache, Cache cache, Cache secondaryCache, CacheProperty cacheProperty,
+    public MdBatchCacheOp(MdBatchCache mdBatchCache, String cacheSpaceName, CacheManager cacheManager, CacheProperty cacheProperty,
                           SpelParseService spelParseService) {
-        this.cache = cache;
-        this.secondaryCache = secondaryCache;
+        this.cacheSpaceName = cacheSpaceName;
+        this.cacheManager = cacheManager;
         this.cacheProperty = cacheProperty;
         this.keyExpr = spelParseService.getExpression(mdBatchCache.key());
         this.listExpr = spelParseService.getExpression("#p" + mdBatchCache.index());
         this.retKeyExpr = spelParseService.getExpression(mdBatchCache.retKey());
         this.listIndex = mdBatchCache.index();
         this.usingOtherDcWhenMissing = mdBatchCache.usingOtherDcWhenMissing();
+        init();
+    }
+
+    private void init() {
+        this.cache = cacheManager.getCache(cacheSpaceName);
+        if (usingOtherDcWhenMissing && !(cacheManager instanceof SyncCacheManager)){
+            throw new RuntimeException("using SyncCacheManager when usingOtherDcWhenMissing is true");
+        }
+        if (cacheManager instanceof SyncCacheManager){
+            this.secondaryCache = ((SyncCacheManager)cacheManager).getSecondaryCache(cacheSpaceName);
+        }
     }
 
     public List<Entry> getEntries(MethodInvocation methodInvocation){
