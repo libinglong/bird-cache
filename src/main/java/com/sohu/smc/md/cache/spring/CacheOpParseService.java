@@ -90,9 +90,11 @@ public class CacheOpParseService {
     private CacheProperty mergedCacheConfig(Method method, CacheProperty defaultCacheProperty){
         BeanWrapper retWrap = new BeanWrapperImpl(defaultCacheProperty.clone());
         MethodCacheConfig config = AnnotationUtils.getAnnotation(method, MethodCacheConfig.class);
-        Prop[] props = config.props();
-        Arrays.stream(props)
-                .forEach(prop -> retWrap.setPropertyValue(prop.name(),prop.value()));
+        if (config != null){
+            Prop[] props = config.props();
+            Arrays.stream(props)
+                    .forEach(prop -> retWrap.setPropertyValue(prop.name(),prop.value()));
+        }
         return (CacheProperty) retWrap.getWrappedInstance();
     }
 
