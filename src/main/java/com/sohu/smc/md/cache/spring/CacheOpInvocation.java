@@ -33,8 +33,7 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
 
     @Override
     public boolean matches(Method method, Class<?> targetClass) {
-        MethodOpContext methodOpContext = cacheOpParseService.getContext(method);
-        contextMap.put(method,methodOpContext);
+        MethodOpContext methodOpContext = contextMap.computeIfAbsent(method, cacheOpParseService::getContext);
         methodOpContext.validate();
         return methodOpContext.hasAnyOp();
     }
