@@ -52,7 +52,7 @@ public class MdCacheableOp {
         if (usingOtherDcWhenMissing){
             processCache = processCache
                     .then(Mono.just(oriEntry))
-                    .filter(entry -> !NullValue.MISS_NULL.equals(entry.getValue()))
+                    .filter(entry -> NullValue.MISS_NULL.equals(entry.getValue()))
                     .doOnNext(entry -> log.debug("fallback to request other dc"))
                     .map(Entry::getCachedKeyObj)
                     .flatMap(this::getFromSecondaryCache)
@@ -69,7 +69,7 @@ public class MdCacheableOp {
         }
         return processCache
                 .then(Mono.just(oriEntry))
-                .filter(entry -> !NullValue.MISS_NULL.equals(entry.getValue()))
+                .filter(entry -> NullValue.MISS_NULL.equals(entry.getValue()))
                 .doOnNext(o -> log.debug("fallback the actual method invoke"))
                 .flatMap(entry -> doInvoke(invocationContext).doOnNext(entry::setValue))
                 .then(Mono.just(oriEntry))

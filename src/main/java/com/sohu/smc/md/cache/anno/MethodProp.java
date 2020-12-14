@@ -13,7 +13,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface MethodCacheConfig {
+public @interface MethodProp {
 
     /**
      * 被声明的项目在执行时会覆盖{@link CacheProperty}中的值

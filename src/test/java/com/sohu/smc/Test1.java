@@ -1,10 +1,6 @@
 package com.sohu.smc;
 
-import com.sohu.smc.md.cache.anno.MethodCacheConfig;
-import com.sohu.smc.md.cache.spring.CacheProperty;
-import org.junit.Test;
 import org.reactivestreams.Subscription;
-import org.springframework.beans.BeanUtils;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
@@ -12,7 +8,6 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
