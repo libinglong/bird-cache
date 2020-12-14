@@ -30,8 +30,8 @@ public class SyncRedisCacheManager implements Closeable, SyncCacheManager, Initi
     private final RedisURI secondaryRedisURI;
     private SyncHandler syncHandler;
 
-    private final RedisCacheManager primaryRedisCacheManager;
-    private final RedisCacheManager secondaryRedisCacheManager;
+    private RedisCacheManager primaryRedisCacheManager;
+    private RedisCacheManager secondaryRedisCacheManager;
 
     public SyncRedisCacheManager(RedisURI redisURI, RedisURI secondaryRedisURI) {
         this(redisURI, DefaultClientResources.create(), secondaryRedisURI, DefaultClientResources.create());
@@ -46,12 +46,12 @@ public class SyncRedisCacheManager implements Closeable, SyncCacheManager, Initi
         this.primaryClientResources = primaryClientResources;
         this.secondaryRedisURI = secondaryRedisURI;
         this.secondaryClientResources = secondaryClientResources;
-        primaryRedisCacheManager = new RedisCacheManager(primaryRedisURI, primaryClientResources);
-        secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources);
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        primaryRedisCacheManager = new RedisCacheManager(primaryRedisURI, primaryClientResources);
+        secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources);
         primaryRedisCacheManager.afterPropertiesSet();
         secondaryRedisCacheManager.afterPropertiesSet();
         if (syncHandler == null){
