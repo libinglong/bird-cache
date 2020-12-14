@@ -8,7 +8,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
@@ -23,11 +22,11 @@ import java.util.concurrent.ExecutionException;
 public class CacheOpInvocation extends StaticMethodMatcherPointcut implements MethodInterceptor{
 
     private final CacheOpParseService cacheOpParseService;
-    private final CacheConfig cacheConfig;
+    private final CacheProperty cacheProperty;
 
-    public CacheOpInvocation(CacheOpParseService cacheOpParseService, CacheConfig cacheConfig) {
+    public CacheOpInvocation(CacheOpParseService cacheOpParseService, CacheProperty cacheProperty) {
         this.cacheOpParseService = cacheOpParseService;
-        this.cacheConfig = cacheConfig;
+        this.cacheProperty = cacheProperty;
     }
 
     private final Map<Method,MethodOpContext> contextMap = new ConcurrentHashMap<>(256);
@@ -46,7 +45,7 @@ public class CacheOpInvocation extends StaticMethodMatcherPointcut implements Me
         MethodOpContext methodOpContext = contextMap.get(invocation.getMethod());
         List<MdCacheEvictOp> evictOps = methodOpContext.getEvictOps();
         List<MdCachePutOp> putOps = methodOpContext.getPutOps();
-        invocationContext.setExecTime(cacheConfig.getDefaultDelayInvalidTime());
+        invocationContext.setExecTime(cacheProperty.getDelayInvalidTime());
         MdCacheableOp cacheableOp = methodOpContext.getCacheableOp();
         MdBatchCacheOp batchCacheOp = methodOpContext.getBatchCacheOp();
         MdCacheClearOp clearOp = methodOpContext.getClearOp();

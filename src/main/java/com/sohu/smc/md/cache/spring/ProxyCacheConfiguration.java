@@ -22,7 +22,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
     private AnnotationAttributes enableMdCaching;
 
     @Autowired(required = false)
-    private CacheConfig cacheConfig;
+    private CacheProperty cacheProperty;
 
     @Autowired
     private CacheManager cacheManager;
@@ -39,7 +39,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Bean
     public CacheOpInvocation cacheOpInvocation() {
-        return new CacheOpInvocation(cacheOpParseService(), cacheConfig);
+        return new CacheOpInvocation(cacheOpParseService(), cacheProperty);
     }
 
     @Bean
@@ -49,7 +49,7 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Bean
     public CacheOpParseService cacheOpParseService(){
-        return new CacheOpParseService(cacheManager, cacheConfig, spelParseService());
+        return new CacheOpParseService(cacheManager, cacheProperty, spelParseService());
     }
 
     @Override
@@ -65,8 +65,8 @@ public class ProxyCacheConfiguration implements ImportAware, InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        if (cacheConfig == null){
-            cacheConfig = new CacheConfig();
+        if (cacheProperty == null){
+            cacheProperty = new CacheProperty();
         }
     }
 }

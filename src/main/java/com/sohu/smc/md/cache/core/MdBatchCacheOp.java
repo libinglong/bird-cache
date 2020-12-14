@@ -2,7 +2,7 @@ package com.sohu.smc.md.cache.core;
 
 import com.sohu.smc.md.cache.anno.MdBatchCache;
 import com.sohu.smc.md.cache.spel.ParamEvaluationContext;
-import com.sohu.smc.md.cache.spring.CacheConfig;
+import com.sohu.smc.md.cache.spring.CacheProperty;
 import com.sohu.smc.md.cache.spring.SpelParseService;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
@@ -31,16 +31,16 @@ public class MdBatchCacheOp {
     private final Expression keyExpr;
     private final Cache cache;
     private final Cache secondaryCache;
-    private final CacheConfig cacheConfig;
+    private final CacheProperty cacheProperty;
     private final int listIndex;
     private final boolean usingOtherDcWhenMissing;
     private final Duration timeout = Duration.of(200, ChronoUnit.MILLIS);
 
-    public MdBatchCacheOp(MdBatchCache mdBatchCache, Cache cache, Cache secondaryCache, CacheConfig cacheConfig,
+    public MdBatchCacheOp(MdBatchCache mdBatchCache, Cache cache, Cache secondaryCache, CacheProperty cacheProperty,
                           SpelParseService spelParseService) {
         this.cache = cache;
         this.secondaryCache = secondaryCache;
-        this.cacheConfig = cacheConfig;
+        this.cacheProperty = cacheProperty;
         this.keyExpr = spelParseService.getExpression(mdBatchCache.key());
         this.listExpr = spelParseService.getExpression("#p" + mdBatchCache.index());
         this.retKeyExpr = spelParseService.getExpression(mdBatchCache.retKey());
@@ -156,7 +156,7 @@ public class MdBatchCacheOp {
                 .filter(Entry::isNeedCache)
                 .flatMap(entry -> {
                     if (!entry.isFromOtherDc()){
-                        return cache.set(entry.getCachedKeyObj(), entry.getValue(), cacheConfig.getDefaultExpireTime());
+                        return cache.set(entry.getCachedKeyObj(), entry.getValue(), cacheProperty.getExpireTime());
                     }
                     if (entry.getPttl() > 0){
                         return cache.set(entry.getCachedKeyObj(), entry.getValue(), entry.getPttl());

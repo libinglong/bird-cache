@@ -1,16 +1,18 @@
 package com.sohu.smc;
 
+import com.sohu.smc.md.cache.anno.MethodCacheConfig;
+import com.sohu.smc.md.cache.spring.CacheProperty;
 import org.junit.Test;
 import org.reactivestreams.Subscription;
+import org.springframework.beans.BeanUtils;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
-import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
@@ -98,22 +100,28 @@ public class Test1 {
 
 
 
-//    @Test
-    public void j() throws InterruptedException, ExecutionException {
-        Scheduler elastic = Schedulers.elastic();
-        Mono.just(1)
-                .doOnNext(integer -> System.out.println("1" + Thread.currentThread().getName()))
-                .doOnTerminate(() -> Mono.just(1).doOnNext(integer -> {
-                    System.out.println("1:" +System.currentTimeMillis());
-                    try {
-                        Thread.sleep(3000L);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    System.out.println("2" + Thread.currentThread().getName());
-                }).subscribeOn(elastic).subscribe())
-                .doOnNext(integer -> System.out.println("2:" + System.currentTimeMillis()))
-                .subscribe();
+    @Test
+//    @Prop(name = "a", value = "b")
+    @MethodCacheConfig
+    public void j() throws InterruptedException, ExecutionException, NoSuchMethodException {
+        CacheProperty config = new CacheProperty();
+        CacheProperty config1 = new CacheProperty();
+        config1.setDelayInvalidTime(1);
+        config1.setExpireTime(1);
+        BeanUtils.copyProperties(config, config1);
+
+
+        wrapper.convertIfNecessary();
+
+
+        Arrays.stream(wrapper.getPropertyDescriptors())
+                .forEach(propertyDescriptor -> {
+                    String name = propertyDescriptor.getName();
+                    Object propertyValue = wrapper.getPropertyValue(name);
+                    System.out.println();
+                });
+
+
         latch.await();
     }
 
