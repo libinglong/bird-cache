@@ -5,7 +5,6 @@ import com.sohu.smc.md.cache.cache.RedisCacheManager;
 import com.sohu.smc.md.cache.cache.SyncOp;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import com.sohu.smc.md.cache.util.RedisClientUtils;
-import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.reactive.RedisReactiveCommands;
 import io.lettuce.core.resource.ClientResources;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +42,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
     private final RedisReactiveCommands<Object, Object> secondaryReactive;
     private static final String ERROR_SYNC_EVENT = "ERROR_SYNC_EVENT";
 
-    public RedisSyncHandler(RedisURI primaryRedisURI, ClientResources primaryClientResources, RedisURI secondaryRedisURI, ClientResources secondaryClientResources, Serializer serializer) {
+    public RedisSyncHandler(String primaryRedisURI, ClientResources primaryClientResources, String secondaryRedisURI, ClientResources secondaryClientResources, Serializer serializer, boolean isCluster) {
         Assert.notNull(primaryRedisURI,"primaryRedisURI can not be null");
         Assert.notNull(primaryClientResources,"primaryClientResources can not be null");
         Assert.notNull(secondaryRedisURI,"secondaryRedisURI can not be null");
@@ -54,7 +53,7 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
         secondaryReactive = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources, Duration.of(4000, ChronoUnit.MILLIS))
                 .connect(new ObjectRedisCodec(serializer))
                 .reactive();
-        this.secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources);
+        this.secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources, isCluster);
     }
 
     @Override

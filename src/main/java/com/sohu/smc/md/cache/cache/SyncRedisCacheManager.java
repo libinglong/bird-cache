@@ -7,7 +7,6 @@ import com.sohu.smc.md.cache.core.SyncHandler;
 import com.sohu.smc.md.cache.serializer.PbSerializer;
 import com.sohu.smc.md.cache.serializer.ReactorSerializer;
 import com.sohu.smc.md.cache.serializer.Serializer;
-import io.lettuce.core.RedisURI;
 import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
 import org.springframework.beans.factory.InitializingBean;
@@ -26,37 +25,40 @@ public class SyncRedisCacheManager implements Closeable, SyncCacheManager, Initi
     private final Serializer serializer = new ReactorSerializer(new PbSerializer());
     private final ClientResources primaryClientResources;
     private final ClientResources secondaryClientResources;
-    private final RedisURI primaryRedisURI;
-    private final RedisURI secondaryRedisURI;
+    private final String primaryRedisURI;
+    private final String secondaryRedisURI;
+    private final boolean isCluster;
     private SyncHandler syncHandler;
 
     private RedisCacheManager primaryRedisCacheManager;
     private RedisCacheManager secondaryRedisCacheManager;
 
-    public SyncRedisCacheManager(RedisURI redisURI, RedisURI secondaryRedisURI) {
-        this(redisURI, DefaultClientResources.create(), secondaryRedisURI, DefaultClientResources.create());
+    public SyncRedisCacheManager(String redisURI, String secondaryRedisURI, boolean isCluster) {
+        this(redisURI, DefaultClientResources.create(), secondaryRedisURI, DefaultClientResources.create(), isCluster);
     }
 
-    public SyncRedisCacheManager(RedisURI primaryRedisURI, ClientResources primaryClientResources, RedisURI secondaryRedisURI, ClientResources secondaryClientResources) {
-        Assert.notNull(primaryRedisURI,"primaryRedisURI can not be null");
+    public SyncRedisCacheManager(String primaryRedisURI, ClientResources primaryClientResources, String secondaryRedisURI,
+                                 ClientResources secondaryClientResources, boolean isCluster) {
+        Assert.hasText(primaryRedisURI,"primaryRedisURI can not be empty");
         Assert.notNull(primaryClientResources,"primaryClientResources can not be null");
-        Assert.notNull(secondaryRedisURI,"secondaryRedisURI can not be null");
+        Assert.hasText(secondaryRedisURI,"secondaryRedisURI can not be empty");
         Assert.notNull(secondaryClientResources,"secondaryClientResources can not be null");
         this.primaryRedisURI = primaryRedisURI;
         this.primaryClientResources = primaryClientResources;
         this.secondaryRedisURI = secondaryRedisURI;
         this.secondaryClientResources = secondaryClientResources;
+        this.isCluster = isCluster;
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        primaryRedisCacheManager = new RedisCacheManager(primaryRedisURI, primaryClientResources);
-        secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources);
+        primaryRedisCacheManager = new RedisCacheManager(primaryRedisURI, primaryClientResources, isCluster);
+        secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources, isCluster);
         primaryRedisCacheManager.afterPropertiesSet();
         secondaryRedisCacheManager.afterPropertiesSet();
         if (syncHandler == null){
             RedisSyncHandler redisSyncHandler = new RedisSyncHandler(primaryRedisURI, primaryClientResources, secondaryRedisURI,
-                    secondaryClientResources, serializer);
+                    secondaryClientResources, serializer, isCluster);
             redisSyncHandler.afterPropertiesSet();
             syncHandler = redisSyncHandler;
         }

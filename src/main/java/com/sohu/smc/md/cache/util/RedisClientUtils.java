@@ -1,6 +1,11 @@
 package com.sohu.smc.md.cache.util;
 
-import io.lettuce.core.*;
+import io.lettuce.core.ClientOptions;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.SocketOptions;
+import io.lettuce.core.TimeoutOptions;
+import io.lettuce.core.cluster.ClusterClientOptions;
+import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.resource.ClientResources;
 
 import java.time.Duration;
@@ -13,7 +18,7 @@ import java.time.temporal.ChronoUnit;
  */
 public class RedisClientUtils {
 
-    public static RedisClient initRedisClient(RedisURI redisURI, ClientResources clientResources, Duration commandTimeout){
+    public static RedisClient initRedisClient(String redisURI, ClientResources clientResources, Duration commandTimeout){
         RedisClient redisClient;
         if (clientResources == null){
             redisClient = RedisClient.create(redisURI);
@@ -34,6 +39,29 @@ public class RedisClientUtils {
                 .build();
         redisClient.setOptions(options);
         return redisClient;
+    }
+
+    public static RedisClusterClient initRedisClusterClient(String redisURI, ClientResources clientResources, Duration commandTimeout){
+        RedisClusterClient redisClusterClient;
+        if (clientResources == null){
+            redisClusterClient = RedisClusterClient.create(redisURI);
+        } else {
+            redisClusterClient = RedisClusterClient.create(clientResources, redisURI);
+        }
+        TimeoutOptions timeoutOptions = TimeoutOptions.builder()
+                .fixedTimeout(commandTimeout)
+                .build();
+        SocketOptions socketOptions = SocketOptions.builder()
+                .connectTimeout(Duration.of(3000, ChronoUnit.MILLIS))
+                .build();
+        ClusterClientOptions options = ClusterClientOptions.builder()
+                .disconnectedBehavior(ClientOptions.DisconnectedBehavior.REJECT_COMMANDS)
+                .cancelCommandsOnReconnectFailure(true)
+                .timeoutOptions(timeoutOptions)
+                .socketOptions(socketOptions)
+                .build();
+        redisClusterClient.setOptions(options);
+        return redisClusterClient;
     }
 
 
