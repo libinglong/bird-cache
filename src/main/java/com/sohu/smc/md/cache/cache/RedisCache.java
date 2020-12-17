@@ -3,7 +3,7 @@ package com.sohu.smc.md.cache.cache;
 import com.sohu.smc.md.cache.core.Cache;
 import com.sohu.smc.md.cache.core.NullValue;
 import io.lettuce.core.KeyValue;
-import io.lettuce.core.api.reactive.RedisReactiveCommands;
+import io.lettuce.core.cluster.api.reactive.RedisClusterReactiveCommands;
 import org.springframework.beans.factory.InitializingBean;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -22,7 +22,7 @@ public class RedisCache implements Cache, InitializingBean {
     private final String cacheSpaceName;
     private final RedisCacheManager redisCacheManager;
 
-    private RedisReactiveCommands<Object, Object> reactive;
+    private RedisClusterReactiveCommands<Object, Object> reactive;
 
     public RedisCache(String cacheSpaceName, RedisCacheManager redisCacheManager) {
         this.cacheSpaceName = cacheSpaceName;
@@ -112,9 +112,15 @@ public class RedisCache implements Cache, InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        this.reactive = redisCacheManager.getRedisClient()
-                .connect(new ObjectRedisCodec(redisCacheManager.getSerializer()))
-                .reactive();
+        if (redisCacheManager.isCluster()){
+            this.reactive = redisCacheManager.getRedisClusterClient()
+                    .connect(new ObjectRedisCodec(redisCacheManager.getSerializer()))
+                    .reactive();
+        } else {
+            this.reactive = redisCacheManager.getRedisClient()
+                    .connect(new ObjectRedisCodec(redisCacheManager.getSerializer()))
+                    .reactive();
+        }
         CacheSpaceImpl cacheSpace = new CacheSpaceImpl(redisCacheManager, this);
         cacheSpace.afterPropertiesSet();
         this.cacheSpace = cacheSpace;

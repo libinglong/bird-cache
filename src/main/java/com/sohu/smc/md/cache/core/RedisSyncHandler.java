@@ -5,7 +5,8 @@ import com.sohu.smc.md.cache.cache.RedisCacheManager;
 import com.sohu.smc.md.cache.cache.SyncOp;
 import com.sohu.smc.md.cache.serializer.Serializer;
 import com.sohu.smc.md.cache.util.RedisClientUtils;
-import io.lettuce.core.api.reactive.RedisReactiveCommands;
+import io.lettuce.core.api.reactive.BaseRedisReactiveCommands;
+import io.lettuce.core.api.reactive.RedisSetReactiveCommands;
 import io.lettuce.core.resource.ClientResources;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Subscription;
@@ -37,23 +38,27 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
     private static final Scheduler scheduler = Schedulers.newParallel("parallel-scheduler", 4);
 
-    private final RedisCacheManager secondaryRedisCacheManager;
-    private final RedisReactiveCommands<Object, Object> primaryReactive;
-    private final RedisReactiveCommands<Object, Object> secondaryReactive;
+    private RedisCacheManager secondaryRedisCacheManager;
+    private RedisSetReactiveCommands<Object, Object> primaryReactive;
     private static final String ERROR_SYNC_EVENT = "ERROR_SYNC_EVENT";
+    private final Serializer serializer;
+    private final boolean isCluster;
+    private final String primaryRedisURI;
+    private final ClientResources primaryClientResources;
+    private final String secondaryRedisURI;
+    private final ClientResources secondaryClientResources;
 
     public RedisSyncHandler(String primaryRedisURI, ClientResources primaryClientResources, String secondaryRedisURI, ClientResources secondaryClientResources, Serializer serializer, boolean isCluster) {
         Assert.notNull(primaryRedisURI,"primaryRedisURI can not be null");
         Assert.notNull(primaryClientResources,"primaryClientResources can not be null");
         Assert.notNull(secondaryRedisURI,"secondaryRedisURI can not be null");
         Assert.notNull(secondaryClientResources,"secondaryClientResources can not be null");
-        primaryReactive = RedisClientUtils.initRedisClient(primaryRedisURI, primaryClientResources, Duration.of(3000, ChronoUnit.MILLIS))
-                .connect(new ObjectRedisCodec(serializer))
-                .reactive();
-        secondaryReactive = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources, Duration.of(4000, ChronoUnit.MILLIS))
-                .connect(new ObjectRedisCodec(serializer))
-                .reactive();
-        this.secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources, isCluster);
+        this.serializer = serializer;
+        this.isCluster = isCluster;
+        this.primaryRedisURI = primaryRedisURI;
+        this.primaryClientResources = primaryClientResources;
+        this.secondaryRedisURI = secondaryRedisURI;
+        this.secondaryClientResources = secondaryClientResources;
     }
 
     @Override
@@ -118,7 +123,28 @@ public class RedisSyncHandler implements SyncHandler, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        if (isCluster){
+            primaryReactive = RedisClientUtils.initRedisClusterClient(primaryRedisURI, primaryClientResources, Duration.of(3000, ChronoUnit.MILLIS))
+                    .connect(new ObjectRedisCodec(serializer))
+                    .reactive();
+        } else {
+            primaryReactive = RedisClientUtils.initRedisClient(primaryRedisURI, primaryClientResources, Duration.of(3000, ChronoUnit.MILLIS))
+                    .connect(new ObjectRedisCodec(serializer))
+                    .reactive();
+        }
+        BaseRedisReactiveCommands<Object, Object> secondaryReactive;
+        if (isCluster){
+            secondaryReactive = RedisClientUtils.initRedisClusterClient(secondaryRedisURI, secondaryClientResources, Duration.of(4000, ChronoUnit.MILLIS))
+                    .connect(new ObjectRedisCodec(serializer))
+                    .reactive();
+        } else {
+            secondaryReactive = RedisClientUtils.initRedisClient(secondaryRedisURI, secondaryClientResources, Duration.of(4000, ChronoUnit.MILLIS))
+                    .connect(new ObjectRedisCodec(serializer))
+                    .reactive();
+        }
+        secondaryRedisCacheManager = new RedisCacheManager(secondaryRedisURI, secondaryClientResources, isCluster);
         secondaryRedisCacheManager.afterPropertiesSet();
+
         Flux<Long> syncOpFlux = secondaryReactive.ping()
                 .thenMany(primaryReactive.srandmember(ERROR_SYNC_EVENT, count))
                 .flatMap(o -> {
