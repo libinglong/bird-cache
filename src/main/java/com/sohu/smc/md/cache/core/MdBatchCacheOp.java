@@ -168,11 +168,14 @@ public class MdBatchCacheOp {
                 .thenMany(Flux.fromIterable(entries))
                 .filter(Entry::isNeedCache)
                 .flatMap(entry -> {
-                    if (!entry.isFromOtherDc()){
-                        return cache.set(entry.getCachedKeyObj(), entry.getValue(), cacheProperty.getExpireTime());
+                    if (entry.isFromOtherDc()){
+                        if (entry.getPttl() > 0){
+                            return cache.set(entry.getCachedKeyObj(), entry.getValue(), entry.getPttl());
+                        }
+                        return cache.set(entry.getCachedKeyObj(), entry.getValue());
                     }
-                    if (entry.getPttl() > 0){
-                        return cache.set(entry.getCachedKeyObj(), entry.getValue(), entry.getPttl());
+                    if (cacheProperty.getExpireTime() > 0){
+                        return cache.set(entry.getCachedKeyObj(), entry.getValue(), cacheProperty.getExpireTime());
                     }
                     return cache.set(entry.getCachedKeyObj(), entry.getValue());
                 })

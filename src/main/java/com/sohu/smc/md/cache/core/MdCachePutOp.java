@@ -38,7 +38,12 @@ public class MdCachePutOp {
 
     public Mono<Void> set(InvocationContext invocationContext, Object value){
         Object key = OpHelper.getKey(invocationContext, this, keyExpr);
-        Mono<Void> set = cache.set(key, value, cacheProperty.getExpireTime());
+        Mono<Void> set;
+        if (cacheProperty.getExpireTime() > 0){
+            set = cache.set(key, value, cacheProperty.getExpireTime());
+        } else {
+            set = cache.set(key, value);
+        }
         if (cacheManager instanceof SyncCacheManager){
             SyncHandler syncHandler = ((SyncCacheManager) cacheManager).getSyncHandler();
             return set.doOnTerminate(() -> syncHandler.putSync(cache.getCacheSpaceName(), key, value));

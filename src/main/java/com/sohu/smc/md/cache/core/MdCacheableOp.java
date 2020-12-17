@@ -78,11 +78,15 @@ public class MdCacheableOp {
                 .then(Mono.just(oriEntry))
                 .filter(Entry::isNeedCache)
                 .flatMap(entry -> {
-                    if (!entry.isFromOtherDc()){
-                        return cache.set(entry.getCachedKeyObj(), entry.getValue(), cacheProperty.getExpireTime());
+                    if (entry.isFromOtherDc()){
+                        if (entry.getPttl() > 0){
+                            return cache.set(entry.getCachedKeyObj(), entry.getValue(), entry.getPttl());
+                        }
+                        return cache.set(entry.getCachedKeyObj(), entry.getValue());
+
                     }
-                    if (entry.getPttl() > 0){
-                        return cache.set(entry.getCachedKeyObj(), entry.getValue(), entry.getPttl());
+                    if (cacheProperty.getExpireTime() > 0){
+                        return cache.set(entry.getCachedKeyObj(), entry.getValue(), cacheProperty.getExpireTime());
                     }
                     return cache.set(entry.getCachedKeyObj(), entry.getValue());
                 })
@@ -97,9 +101,9 @@ public class MdCacheableOp {
     }
 
     private Mono<CacheValue> getFromSecondaryCache(Object key){
-        return secondaryCache.get(key)
-                .zipWith(secondaryCache.pttl(key))
-                .map(tuple2 -> new CacheValue(tuple2.getT2(), tuple2.getT1()))
+        return secondaryCache.pttl(key)
+                .zipWith(secondaryCache.get(key))
+                .map(tuple2 -> new CacheValue(tuple2.getT1(), tuple2.getT2()))
                 .timeout(timeout)
                 .onErrorResume(e -> Mono.empty());
     }

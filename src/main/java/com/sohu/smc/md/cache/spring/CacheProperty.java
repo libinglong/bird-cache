@@ -20,7 +20,7 @@ public class CacheProperty implements Cloneable {
     public static final String DEFAULT_CACHE_MANAGER_BEAN_NAME = "cacheManager";
 
     /**
-     * 过期时间 毫秒 0表示不过期
+     * 过期时间 毫秒 0或者负数表示不过期
      */
     private long expireTime = DEFAULT_EXPIRE_TIME;
 
