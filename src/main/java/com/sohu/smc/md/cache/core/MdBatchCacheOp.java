@@ -12,8 +12,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,36 +27,18 @@ public class MdBatchCacheOp {
     private final Expression listExpr;
     private final Expression retKeyExpr;
     private final Expression keyExpr;
-    private Cache cache;
-    private Cache secondaryCache;
-    private final String cacheSpaceName;
-    private final CacheManager cacheManager;
+    private final Cache cache;
     private final CacheProperty cacheProperty;
     private final int listIndex;
-    private final boolean usingOtherDcWhenMissing;
-    private final Duration timeout = Duration.of(200, ChronoUnit.MILLIS);
 
     public MdBatchCacheOp(MdBatchCache mdBatchCache, String cacheSpaceName, CacheManager cacheManager, CacheProperty cacheProperty,
                           SpelParseService spelParseService) {
-        this.cacheSpaceName = cacheSpaceName;
-        this.cacheManager = cacheManager;
         this.cacheProperty = cacheProperty;
         this.keyExpr = spelParseService.getExpression(mdBatchCache.key());
         this.listExpr = spelParseService.getExpression("#p" + mdBatchCache.index());
         this.retKeyExpr = spelParseService.getExpression(mdBatchCache.retKey());
         this.listIndex = mdBatchCache.index();
-        this.usingOtherDcWhenMissing = mdBatchCache.usingOtherDcWhenMissing();
-        init();
-    }
-
-    private void init() {
         this.cache = cacheManager.getCache(cacheSpaceName);
-        if (usingOtherDcWhenMissing && !(cacheManager instanceof SyncCacheManager)){
-            throw new RuntimeException("using SyncCacheManager when usingOtherDcWhenMissing is true");
-        }
-        if (cacheManager instanceof SyncCacheManager){
-            this.secondaryCache = ((SyncCacheManager)cacheManager).getSecondaryCache(cacheSpaceName);
-        }
     }
 
     public List<Entry> getEntries(MethodInvocation methodInvocation){
@@ -81,7 +61,7 @@ public class MdBatchCacheOp {
     public Mono<List<Object>> processBatchCacheOp(InvocationContext invocationContext) {
         MethodInvocation methodInvocation = invocationContext.getMethodInvocation();
         List<Entry> entries = getEntries(methodInvocation);
-        Mono<?> processCache = Mono.justOrEmpty(entries)
+        return Mono.justOrEmpty(entries)
                 .flatMapMany(Flux::fromIterable)
                 .map(Entry::getCachedKeyObj)
                 .collectList()
@@ -97,33 +77,7 @@ public class MdBatchCacheOp {
                             entry.setNeedCache(true);
                         }
                     });
-                });
-        if (usingOtherDcWhenMissing){
-            processCache = processCache
-                    .thenMany(Flux.fromIterable(entries))
-                    .filter(entry -> NullValue.MISS_NULL.equals(entry.getValue()))
-                    .map(Entry::getCachedKeyObj)
-                    .collectList()
-                    .filter(objects -> !objects.isEmpty())
-                    .doOnNext(objects -> log.debug("fallback to request other dc"))
-                    .flatMap(this::getSecondaryCacheMap)
-                    .timeout(timeout)
-                    .onErrorResume(throwable -> Mono.empty())
-                    .zipWith(Mono.justOrEmpty(entries))
-                    .doOnNext(tuple -> {
-                        Map<Object, CacheValue> map = tuple.getT1();
-                        List<Entry> entries1 = tuple.getT2();
-                        entries1.forEach(entry -> {
-                            CacheValue cacheValue = map.get(entry.getCachedKeyObj());
-                            if (cacheValue !=null && !NullValue.MISS_NULL.equals(cacheValue.getV())){
-                                entry.setValue(cacheValue.getV());
-                                entry.setPttl(cacheValue.getPttl());
-                                entry.setFromOtherDc(true);
-                            }
-                        });
-                    });
-        }
-        return processCache
+                })
                 .thenMany(Flux.fromIterable(entries))
                 .filter(entry -> NullValue.MISS_NULL.equals(entry.getValue()))
                 .map(Entry::getOriginKeyObj)
@@ -168,12 +122,6 @@ public class MdBatchCacheOp {
                 .thenMany(Flux.fromIterable(entries))
                 .filter(Entry::isNeedCache)
                 .flatMap(entry -> {
-                    if (entry.isFromOtherDc()){
-                        if (entry.getPttl() > 0){
-                            return cache.set(entry.getCachedKeyObj(), entry.getValue(), entry.getPttl());
-                        }
-                        return cache.set(entry.getCachedKeyObj(), entry.getValue());
-                    }
                     if (cacheProperty.getExpireTime() > 0){
                         return cache.set(entry.getCachedKeyObj(), entry.getValue(), cacheProperty.getExpireTime());
                     }
@@ -207,16 +155,6 @@ public class MdBatchCacheOp {
         return cache.get(keys)
                 .zipWith(Flux.fromIterable(keys))
                 .collectMap(Tuple2::getT2, Tuple2::getT1);
-    }
-
-    private Mono<Map<Object, CacheValue>> getSecondaryCacheMap(List<Object> keys){
-        Flux<CacheValue> cvs = Flux.fromIterable(keys)
-                .flatMap(secondaryCache::pttl)
-                .zipWith(secondaryCache.get(keys))
-                .map(tuple2 -> new CacheValue(tuple2.getT1(), tuple2.getT2()));
-        return Flux.fromIterable(keys)
-                .zipWith(cvs)
-                .collectMap(Tuple2::getT1, Tuple2::getT2);
     }
 
 }

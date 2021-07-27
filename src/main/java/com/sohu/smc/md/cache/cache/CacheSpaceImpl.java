@@ -32,7 +32,7 @@ public class CacheSpaceImpl implements CacheSpace, InitializingBean {
     protected static final String CACHE_SPACE_CHANGE_CHANNEL = "CACHE_SPACE_CHANGE_CHANNEL";
 
     @Override
-    public Mono<Void> incrVersion() {
+    public Mono<Void> incVersion() {
         return reactive.incr(getCacheSpaceVersionKey())
                 //保证当前jvm的实时性,立刻remove
                 .doOnNext(aLong -> versionMap.remove(getCacheSpaceVersionKey()))

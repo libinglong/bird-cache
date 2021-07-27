@@ -15,6 +15,5 @@ public class Entry {
     private Object value;
     private boolean needCache = false;
     private Long pttl;
-    private boolean fromOtherDc = false;
 
 }

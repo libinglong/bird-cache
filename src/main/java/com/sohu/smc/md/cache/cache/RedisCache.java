@@ -88,7 +88,7 @@ public class RedisCache implements Cache, InitializingBean {
 
     @Override
     public Mono<Void> clear() {
-        return cacheSpace.incrVersion();
+        return cacheSpace.incVersion();
     }
 
     @Override

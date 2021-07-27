@@ -112,9 +112,9 @@ public class CacheOpParseService {
             Arrays.stream(props)
                     .forEach(prop -> retWrap.setPropertyValue(prop.name(),prop.value()));
         }
-        MProp methodconfig = AnnotationUtils.getAnnotation(method, MProp.class);
-        if (methodconfig != null){
-            Prop[] props = methodconfig.props();
+        MProp methodConfig = AnnotationUtils.getAnnotation(method, MProp.class);
+        if (methodConfig != null){
+            Prop[] props = methodConfig.props();
             Arrays.stream(props)
                     .forEach(prop -> retWrap.setPropertyValue(prop.name(),prop.value()));
         }

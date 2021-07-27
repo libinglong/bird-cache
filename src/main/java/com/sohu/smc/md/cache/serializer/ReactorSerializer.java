@@ -10,7 +10,7 @@ import org.springframework.util.Assert;
  */
 public class ReactorSerializer implements Serializer {
 
-    private Serializer delegate;
+    private final Serializer delegate;
 
     public ReactorSerializer(Serializer delegate) {
         this.delegate = delegate;

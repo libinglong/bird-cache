@@ -13,23 +13,16 @@ import reactor.core.publisher.Mono;
  */
 public class MdCachePutOp {
 
-    private Cache cache;
-    private final String cacheSpaceName;
-    private final CacheManager cacheManager;
+    private final Cache cache;
     private final CacheProperty cacheProperty;
     private final Expression keyExpr;
 
     public MdCachePutOp(MdCachePut mdCachePut, String cacheSpaceName, CacheManager cacheManager, CacheProperty cacheProperty,
                         SpelParseService spelParseService) {
-        this.cacheSpaceName = cacheSpaceName;
-        this.cacheManager = cacheManager;
         this.cacheProperty = cacheProperty;
         this.keyExpr = spelParseService.getExpression(mdCachePut.key());
-        init();
-    }
-
-    private void init() {
         this.cache = cacheManager.getCache(cacheSpaceName);
+
     }
 
     public Mono<Void> delayInvalid(InvocationContext invocationContext) throws RuntimeException {
@@ -43,10 +36,6 @@ public class MdCachePutOp {
             set = cache.set(key, value, cacheProperty.getExpireTime());
         } else {
             set = cache.set(key, value);
-        }
-        if (cacheManager instanceof SyncCacheManager){
-            SyncHandler syncHandler = ((SyncCacheManager) cacheManager).getSyncHandler();
-            return set.doOnTerminate(() -> syncHandler.putSync(cache.getCacheSpaceName(), key, value));
         }
         return set;
     }

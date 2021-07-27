@@ -13,22 +13,14 @@ import reactor.core.publisher.Mono;
  */
 public class MdCacheEvictOp {
 
-    private Cache cache;
+    private final Cache cache;
     private final CacheProperty cacheProperty;
     private final Expression keyExpr;
-    private final String cacheSpaceName;
-    private final CacheManager cacheManager;
 
     public MdCacheEvictOp(MdCacheEvict mdCacheEvict, String cacheSpaceName, CacheManager cacheManager, CacheProperty cacheProperty,
                           SpelParseService spelParseService) {
-        this.cacheSpaceName = cacheSpaceName;
-        this.cacheManager = cacheManager;
         this.cacheProperty = cacheProperty;
         this.keyExpr = spelParseService.getExpression(mdCacheEvict.key());
-        init();
-    }
-
-    private void init() {
         this.cache = cacheManager.getCache(cacheSpaceName);
     }
 
@@ -38,12 +30,7 @@ public class MdCacheEvictOp {
 
     public Mono<Void> delete(InvocationContext invocationContext) throws RuntimeException {
         Object key = OpHelper.getKey(invocationContext, this, keyExpr);
-        Mono<Void> delete = cache.delete(key);
-        if (cacheManager instanceof SyncCacheManager){
-            SyncHandler syncHandler = ((SyncCacheManager) cacheManager).getSyncHandler();
-            return delete.doOnTerminate(() -> syncHandler.evictSync(cache.getCacheSpaceName(), key));
-        }
-        return delete;
+        return cache.delete(key);
     }
 
 }

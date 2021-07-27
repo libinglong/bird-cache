@@ -12,7 +12,7 @@ public interface CacheSpace {
     /**
      * 增加缓存空间版本
      */
-    Mono<Void> incrVersion();
+    Mono<Void> incVersion();
 
     /**
      * 获取命名空间前缀

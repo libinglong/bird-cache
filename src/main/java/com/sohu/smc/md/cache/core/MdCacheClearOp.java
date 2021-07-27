@@ -24,12 +24,7 @@ public class MdCacheClearOp {
     }
 
     public Mono<Void> clear(){
-        Mono<Void> clear = cache.clear();
-        if (cacheManager instanceof SyncCacheManager){
-            SyncHandler syncHandler = ((SyncCacheManager) cacheManager).getSyncHandler();
-            return clear.doOnTerminate(() -> syncHandler.clearSync(cache.getCacheSpaceName()));
-        }
-        return clear;
+        return cache.clear();
     }
 
 }
